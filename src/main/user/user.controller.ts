@@ -6,25 +6,28 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
+import { AuthGuard } from 'src/guard/auth.guard';
+import { Request } from 'express';
+import { CreateAnUserDto } from './user.dto';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  // Get me
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getUser(@Req() req: Request) {
+    return this.userService.getMe(req.user);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  // Create user (Server/ Developer)
+  @Post('register')
+  async registerUser(@Body() createAnUserDto: CreateAnUserDto) {
+    return this.userService.registerUser(createAnUserDto);
   }
 }

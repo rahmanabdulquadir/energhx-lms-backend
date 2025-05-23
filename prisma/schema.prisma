@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -17,6 +16,45 @@ model User {
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  Developer Developer?
+  Server    Server?
+}
+
+model Developer {
+  id        String @id @default(uuid())
+  firstName String
+  lastName  String
+  imageUrl  String
+  gender    Gender
+  email     String
+  phone     String
+
+  address     Address?
+  Reference   Reference?
+  Publication Publication[]
+  Experience  Experience[]
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+}
+
+model Server {
+  id        String @id @default(uuid())
+  firstName String
+  lastName  String
+  imageUrl  String
+  gender    Gender
+  email     String
+  phone     String
+
+  Address     Address?
+  Reference   Reference?
+  Publication Publication[]
+  Experience  Experience[]
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
 }
 
 model Address {
@@ -73,36 +111,6 @@ model Experience {
   developerId String
   Server      Server?   @relation(fields: [serverId], references: [id])
   serverId    String?
-}
-
-model Developer {
-  id        String @id @default(uuid())
-  firstName String
-  lastName  String
-  imageUrl  String
-  gender    Gender
-  mail      String
-  phone     String
-
-  address     Address?
-  Reference   Reference?
-  Publication Publication[]
-  Experience  Experience[]
-}
-
-model Server {
-  id        String @id @default(uuid())
-  firstName String
-  lastName  String
-  imageUrl  String
-  gender    Gender
-  mail      String
-  phone     String
-
-  Address     Address?
-  Reference   Reference?
-  Publication Publication[]
-  Experience  Experience[]
 }
 
 enum UserRole {
