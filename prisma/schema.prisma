@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -34,25 +28,81 @@ model Address {
   province     String
   country      String
 
-  developer   Developer? @relation(fields: [developerId], references: [id])
-  developerId String?    @unique
+  developer   Developer @relation(fields: [developerId], references: [id])
+  developerId String    @unique
+
+  server   Server @relation(fields: [serverId], references: [id])
+  serverId String @unique
+}
+
+model Publication {
+  id              String @id @default(uuid())
+  publisher       String
+  title           String
+  authorList      String
+  pages           String
+  publicationYear Int
+
+  developer   Developer @relation(fields: [developerId], references: [id])
+  developerId String
+  Server      Server?   @relation(fields: [serverId], references: [id])
+  serverId    String?
+}
+
+model Reference {
+  id       String @id @default(uuid())
+  name     String
+  document String
+
+  developer   Developer @relation(fields: [developerId], references: [id])
+  developerId String    @unique
+
+  server   Server @relation(fields: [serverId], references: [id])
+  serverId String @unique
 }
 
 model Experience {
   id        String   @id @default(uuid())
   name      String
-  documents String[]
+  address   String
+  title     String
+  startDate DateTime
+  endDate   DateTime
+
+  developer   Developer @relation(fields: [developerId], references: [id])
+  developerId String
+  Server      Server?   @relation(fields: [serverId], references: [id])
+  serverId    String?
 }
 
 model Developer {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   firstName String
   lastName  String
-  imageUrl  String 
+  imageUrl  String
   gender    Gender
   mail      String
-  phone     String 
-  address   Address?
+  phone     String
+
+  address     Address?
+  Reference   Reference?
+  Publication Publication[]
+  Experience  Experience[]
+}
+
+model Server {
+  id        String @id @default(uuid())
+  firstName String
+  lastName  String
+  imageUrl  String
+  gender    Gender
+  mail      String
+  phone     String
+
+  Address     Address?
+  Reference   Reference?
+  Publication Publication[]
+  Experience  Experience[]
 }
 
 enum UserRole {
