@@ -11,7 +11,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService,  private prisma: PrismaService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -24,13 +27,15 @@ export class AuthGuard implements CanActivate {
         secret: new ConfigService().getOrThrow('JWT_SECRET'),
       });
       const { email } = decoded;
-      
-      const user = await this.prisma.user.findUnique({ where: { email: email } });
-    
+
+      const user = await this.prisma.user.findUnique({
+        where: { email: email },
+      });
+
       if (!user) {
         throw new HttpException('User not found!', 404);
       }
-      if (user?.status === "DELETED") {
+      if (user?.status === 'DELETED') {
         throw new HttpException('User is deleted!', 403);
       }
       if (user?.status === 'BLOCKED') {
@@ -40,12 +45,12 @@ export class AuthGuard implements CanActivate {
     } catch (error) {
       throw new HttpException('Token Not Provided', 401);
     }
-    
+
     return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    const token = request.headers.authorization;
+    return token;
   }
 }
