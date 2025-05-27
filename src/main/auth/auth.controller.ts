@@ -19,16 +19,9 @@ import {
 import sendResponse from 'src/utils/sendResponse';
 import { AuthGuard } from 'src/guard/auth.guard';
 
-interface CustomRequest extends Request {
-  cookies: {
-    refreshToken: string; // explicitly type the cookie as a string
-  };
-}
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
   @Post('login')
   async loginUser(@Body() loginDto: LoginDto, @Res() res: Response) {
     const result = await this.authService.loginUser(loginDto);
@@ -72,7 +65,7 @@ export class AuthController {
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
-      message: 'Please check your mail',
+      message: 'Please check your mail!',
       data: result,
     });
   }

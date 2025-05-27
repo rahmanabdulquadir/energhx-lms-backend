@@ -56,7 +56,7 @@ export class CreateUserDto {
   postalCode: number;
 
   @IsString()
-  province: string;
+  city: string;
 
   @IsString()
   countryId: string;

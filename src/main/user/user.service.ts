@@ -66,7 +66,10 @@ export class UserService {
 
   // ------------------------------- Get All Users -------------------------------
   public async getAllUsers() {
-    const result = await this.prisma.user.findMany();
+    const result = await this.prisma.user.findMany({
+      where: { isVerified: true },
+    });
+    console.log(result);
     return result;
   }
 
@@ -76,13 +79,8 @@ export class UserService {
       where: { email: dto.email },
     });
     const token = this.jwtService.sign(
-      {
-        email: dto.email,
-      },
-      {
-        secret: this.configService.get('JWT_SECRET'),
-        expiresIn: '10m',
-      },
+      { email: dto.email },
+      { secret: this.configService.get('JWT_SECRET'), expiresIn: '10m' },
     );
 
     if (existingUser && !existingUser.isVerified) {
@@ -129,7 +127,7 @@ export class UserService {
         streetNumber: dto.streetNumber,
         street: dto.street,
         postalCode: dto.postalCode,
-        province: dto.province,
+        city: dto.city,
         countryId: dto.countryId,
         stateId: dto.stateId,
         userType: dto.userType,

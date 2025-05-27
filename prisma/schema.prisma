@@ -22,7 +22,7 @@ model User {
   streetNumber Int
   street       String
   postalCode   Int
-  province     String
+  city         String
 
   countryId String
   country   Country @relation(fields: [countryId], references: [id])
@@ -40,8 +40,8 @@ model User {
 
 model Country {
   id        String   @id @default(uuid())
-  name      String
-  code      String
+  name      String   @unique
+  code      String   @unique
   states    State[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
