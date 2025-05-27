@@ -15,7 +15,7 @@ import {
   ForgotPasswordDto,
   ChangePasswordDto,
   ResetPasswordDto,
-} from './auth.Dto';
+} from './auth.dto';
 import sendResponse from 'src/utils/sendResponse';
 import { AuthGuard } from 'src/guard/auth.guard';
 

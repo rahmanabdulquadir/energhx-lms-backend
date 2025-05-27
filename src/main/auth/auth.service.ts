@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Status } from '@prisma/client';
-import { ChangePasswordDto } from './auth.Dto';
+import { ChangePasswordDto } from './auth.dto';
 import { MailerService } from 'src/utils/sendMail';
 import { ApiResponse } from 'src/utils/sendResponse';
 import { TUser } from 'src/interface/token.type';
