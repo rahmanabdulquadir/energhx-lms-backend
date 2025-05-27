@@ -8,37 +8,63 @@ datasource db {
 }
 
 model User {
-  id        String  @id @default(uuid())
-  firstName String
-  lastName  String
-  gender    Gender
-  phone     String
-  email     String  @unique
-  password  String
-  imageUrl  String?
+  id                   String  @id @default(uuid())
+  email                String  @unique
+  firstName            String
+  lastName             String
+  otherName            String?
+  sex                  Gender
+  phoneNumber          String
+  alternatePhoneNumber String?
+  password             String?
+  profile_photo        String?
 
   streetNumber Int
   street       String
-  city         String
   postalCode   Int
   province     String
-  country      String
 
-  role      UserRole
-  status    Status     @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  Developer Developer?
-  Server    Server?
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+  stateId   String
+  State     State   @relation(fields: [stateId], references: [id])
+
+  isVerified Boolean    @default(false)
+  userType   UserRole
+  status     Status     @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  developer  Developer?
+  server     Server?
+}
+
+model Country {
+  id        String   @id @default(uuid())
+  name      String
+  code      String
+  states    State[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+}
+
+model State {
+  id        String  @id @default(uuid())
+  name      String
+  country   Country @relation(fields: [countryId], references: [id])
+  countryId String
+
+  users User[]
 }
 
 model Developer {
   id    String @id @default(uuid())
   email String @unique
 
-  Reference   Reference?
-  Publication Publication[]
-  Experience  Experience[]
+  reference    Reference?
+  publications Publication[]
+  experiences  Experience[]
 
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
@@ -48,9 +74,9 @@ model Server {
   id    String @id @default(uuid())
   email String @unique
 
-  Reference   Reference?
-  Publication Publication[]
-  Experience  Experience[]
+  reference    Reference?
+  publications Publication[]
+  experiences  Experience[]
 
   user   User   @relation(fields: [userId], references: [id])
   userId String @unique
@@ -64,9 +90,9 @@ model Publication {
   pages           String
   publicationYear Int
 
-  developer   Developer @relation(fields: [developerId], references: [id])
-  developerId String
-  Server      Server?   @relation(fields: [serverId], references: [id])
+  developer   Developer? @relation(fields: [developerId], references: [id])
+  developerId String?
+  server      Server?    @relation(fields: [serverId], references: [id])
   serverId    String?
 }
 
@@ -75,11 +101,11 @@ model Reference {
   name     String
   document String
 
-  developer   Developer @relation(fields: [developerId], references: [id])
-  developerId String    @unique
+  developer   Developer? @relation(fields: [developerId], references: [id])
+  developerId String?    @unique
 
-  server   Server @relation(fields: [serverId], references: [id])
-  serverId String @unique
+  server   Server? @relation(fields: [serverId], references: [id])
+  serverId String? @unique
 }
 
 model Experience {
@@ -90,15 +116,16 @@ model Experience {
   startDate DateTime
   endDate   DateTime
 
-  developer   Developer @relation(fields: [developerId], references: [id])
-  developerId String
-  Server      Server?   @relation(fields: [serverId], references: [id])
+  developer   Developer? @relation(fields: [developerId], references: [id])
+  developerId String?
+  server      Server?    @relation(fields: [serverId], references: [id])
   serverId    String?
 }
 
 enum UserRole {
   SERVER
   DEVELOPER
+  ADMIN
 }
 
 enum Status {

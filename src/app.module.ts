@@ -10,6 +10,8 @@ import { DeveloperModule } from './main/developer/developer.module';
 import { ServerModule } from './main/server/server.module';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { MailerService } from './utils/sendMail';
+import { CountryModule } from './main/country/country.module';
 
 @Module({
   imports: [
@@ -24,8 +26,9 @@ import { JwtModule } from '@nestjs/jwt';
     JwtModule.register({
       global: true, // This makes JwtService available globally
     }),
+    CountryModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService, UserService],
+  providers: [AppService, UserService, MailerService],
 })
 export class AppModule {}

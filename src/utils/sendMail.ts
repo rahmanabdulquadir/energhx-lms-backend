@@ -23,7 +23,7 @@ export class MailerService {
 
   async sendMail(email: string, html: string): Promise<void> {
     const mailOptions = {
-      from: `"Programming Hero 🏥" <${this.configService.get('EMAIL_SENDER')}>`, // sender address
+      from: `"Enrghx 🏥" <${this.configService.get('EMAIL_SENDER')}>`, // sender address
       to: email, // list of receivers
       subject: 'Reset Password Link 🔗', // Subject line
       text: 'Click on the link to reset your password. Link expires in 10 minutes.', // plain text body

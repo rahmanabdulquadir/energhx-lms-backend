@@ -30,7 +30,7 @@ export class AuthService {
     const isCorrectPassword = await bcrypt.compare(password, user.password);
     if (!isCorrectPassword) throw new HttpException('Invalid credentials', 401);
 
-    const payload = { email: user.email, role: user.role, id: user.id };
+    const payload = { email: user.email, userType: user.userType, id: user.id };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow('JWT_SECRET'),
     });
@@ -82,10 +82,10 @@ export class AuthService {
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
     const token = this.jwtService.sign(
-      { email: user.email, role: user.role },
+      { email: user.email, userType: user.userType, id: user.id },
       { secret: this.configService.get('JWT_SECRET') },
     );
-    const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}?userId=${user.id}&token=${token}`;
+    const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}?token=${token}`;
     await this.mailerService.sendMail(
       user.email,
       `<div>
@@ -100,11 +100,11 @@ export class AuthService {
           </p>
       </div>`,
     );
-
     return null;
   }
 
   public async resetPassword(payload: { newPassword: string }, token: string) {
+    console.log(payload, token);
     // 1. Decode token
     const decoded: any = this.jwtService.verify(token, {
       secret: this.configService.get('JWT_SECRET'),
@@ -112,7 +112,7 @@ export class AuthService {
 
     // 2. Fetch user
     const user = await this.prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: decoded.id },
     });
 
     if (!user || user.status === 'DELETED') {

@@ -1,27 +1,70 @@
-import { Gender } from '@prisma/client';
-import { IsString, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-// for developer profile
-export class DeveloperProfileDto {
+class ReferenceDto {
   @IsString()
-  @IsUUID('4', { message: 'ID must be a valid UUID (version 4).' })
-  userId: string;
-
-  @IsString()
-  email: string;
-
-  @IsString()
-  firstName: string;
-
-  @IsString()
-  lastName: string;
+  name: string;
 
   @IsString()
-  gender: Gender;
+  document: string;
+}
+
+class PublicationDto {
+  @IsString()
+  publisher: string;
 
   @IsString()
-  imageUrl: string;
+  title: string;
 
   @IsString()
-  phone: string;
+  authorList: string;
+
+  @IsString()
+  pages: string;
+
+  @IsInt()
+  publicationYear: number;
+}
+
+class ExperienceDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  address: string;
+
+  @IsString()
+  title: string;
+
+  @IsDateString()
+  startDate: string;
+
+  @IsDateString()
+  endDate: string;
+}
+
+export class CreateDeveloperProfileDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ReferenceDto)
+  reference?: ReferenceDto;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PublicationDto)
+  publications?: PublicationDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExperienceDto)
+  experiences?: ExperienceDto[];
 }

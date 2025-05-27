@@ -1,16 +1,18 @@
 import {
-  IsEmail,
-  IsEnum,
-  IsInt,
-  IsOptional,
   IsString,
+  IsEmail,
   Length,
   Matches,
-  MinLength,
+  IsOptional,
+  IsInt,
+  IsEnum,
 } from 'class-validator';
 import { Gender, UserRole } from '@prisma/client';
 
 export class CreateUserDto {
+  @IsEmail()
+  email: string;
+
   @IsString()
   @Length(2, 50)
   firstName: string;
@@ -19,34 +21,36 @@ export class CreateUserDto {
   @Length(2, 50)
   lastName: string;
 
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  otherName?: string;
+
   @IsEnum(Gender)
-  gender: Gender;
+  sex: Gender;
 
   @IsString()
   @Matches(/^[0-9]{10,15}$/, {
     message: 'Phone number must be between 10 to 15 digits.',
   })
-  phone: string;
+  phoneNumber: string;
 
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(6)
-  password: string;
-
-  @IsString()
   @IsOptional()
-  imageUrl: string;
+  @IsString()
+  @Matches(/^[0-9]{10,15}$/, {
+    message: 'Alternate phone number must be between 10 to 15 digits.',
+  })
+  alternatePhoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  profile_photo?: string;
 
   @IsInt()
   streetNumber: number;
 
   @IsString()
   street: string;
-
-  @IsString()
-  city: string;
 
   @IsInt()
   postalCode: number;
@@ -55,8 +59,21 @@ export class CreateUserDto {
   province: string;
 
   @IsString()
-  country: string;
+  countryId: string;
+
+  @IsString()
+  stateId: string;
 
   @IsEnum(UserRole)
-  role: UserRole;
+  userType: UserRole;
+}
+
+export class CreatePasswordDto {
+  @IsString()
+  @Length(6, 30)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,30}$/, {
+    message:
+      'Password must be between 6 to 30 characters long and include at least one uppercase letter, one lowercase letter, and one number.',
+  })
+  password: string;
 }

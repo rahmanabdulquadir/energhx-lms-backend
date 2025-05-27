@@ -7,8 +7,8 @@ import { ConfigService } from '@nestjs/config';
 import { MailerService } from 'src/utils/sendMail';
 
 @Module({
-  imports: [LibModule, JwtService, ConfigService, MailerService],
+  imports: [LibModule],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, JwtService, ConfigService, MailerService],
 })
 export class UserModule {}

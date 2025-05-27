@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Server } from 'http';
 import { TUser } from 'src/interface/token.type';
 import { LibService } from 'src/lib/lib.service';
@@ -26,7 +21,7 @@ export class UserService {
 
   // ------------------------------- Get Me -------------------------------
   public async getMe(user: TUser) {
-    let result: Developer | Server;
+    let result: Developer | Server | null;
     if (user.role !== 'DEVELOPER' && user.role !== 'SERVER') {
       throw new HttpException(
         'Invalid User role provided',
@@ -41,7 +36,7 @@ export class UserService {
             select: {
               email: true,
               id: true,
-              role: true,
+              userType: true,
               status: true,
               createdAt: true,
               updatedAt: true,
@@ -49,7 +44,7 @@ export class UserService {
           },
         },
       });
-    } else {
+    } else if (user.role == 'SERVER') {
       result = await this.prisma.server.findUniqueOrThrow({
         where: { userId: user.id },
         include: {
@@ -57,7 +52,7 @@ export class UserService {
             select: {
               email: true,
               id: true,
-              role: true,
+              userType: true,
               status: true,
               createdAt: true,
               updatedAt: true,
@@ -65,22 +60,24 @@ export class UserService {
           },
         },
       });
-    }
+    } else result = null;
+    return result;
+  }
+
+  // ------------------------------- Get All Users -------------------------------
+  public async getAllUsers() {
+    const result = await this.prisma.user.findMany();
     return result;
   }
 
   // --------------------------------------- Create User ----------------------------------
   public async registerUser(dto: CreateUserDto) {
-    const hashedPassword = await this.lib.hashPassword({
-      password: dto.password,
-      round: 6,
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
     });
-
-    // Create JWT token with full DTO + hashed password
     const token = this.jwtService.sign(
       {
-        ...dto,
-        password: hashedPassword,
+        email: dto.email,
       },
       {
         secret: this.configService.get('JWT_SECRET'),
@@ -88,9 +85,74 @@ export class UserService {
       },
     );
 
+    if (existingUser && !existingUser.isVerified) {
+      const verificationLink = `${this.configService.get(
+        'VERIFY_EMAIL_LINK',
+      )}create-password?token=${token}`;
+
+      await this.mailerService.sendMail(
+        dto.email,
+        `<div>
+          <p>Hello ${dto.firstName},</p>
+          <p>Click the button below to verify your email and complete registration. This link will expire in 10 minutes.</p>
+          <p><a href="${verificationLink}"><button>Verify Email</button></a></p>
+        </div>`,
+      );
+
+      return null;
+    }
+
+    const state = await this.prisma.state.findUnique({
+      where: { id: dto.stateId },
+    });
+    if (!state) {
+      throw new HttpException('Invalid stateId', HttpStatus.BAD_REQUEST);
+    }
+
+    if (state.countryId !== dto.countryId) {
+      throw new HttpException(
+        'stateId does not belong to the provided countryId',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const createdUser = await this.prisma.user.create({
+      data: {
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        sex: dto.sex,
+        phoneNumber: dto.phoneNumber,
+        alternatePhoneNumber: dto.alternatePhoneNumber,
+        otherName: dto.otherName,
+        email: dto.email,
+        profile_photo: dto.profile_photo,
+        streetNumber: dto.streetNumber,
+        street: dto.street,
+        postalCode: dto.postalCode,
+        province: dto.province,
+        countryId: dto.countryId,
+        stateId: dto.stateId,
+        userType: dto.userType,
+      },
+    });
+    if (dto.userType == 'DEVELOPER')
+      await this.prisma.developer.create({
+        data: {
+          userId: createdUser.id,
+          email: createdUser.email,
+        },
+      });
+    else if (dto.userType == 'SERVER')
+      await this.prisma.server.create({
+        data: {
+          userId: createdUser.id,
+          email: createdUser.email,
+        },
+      });
+
     const verificationLink = `${this.configService.get(
       'VERIFY_EMAIL_LINK',
-    )}?token=${token}`;
+    )}create-password?token=${token}`;
 
     await this.mailerService.sendMail(
       dto.email,
@@ -101,10 +163,10 @@ export class UserService {
       </div>`,
     );
 
-    return { email: dto.email };
+    return null;
   }
-
-  public async verifyEmail(token: string) {
+  // ------------------------------- Create Password -------------------------------
+  public async createPassword(password: string, token: string) {
     let payload: any;
 
     try {
@@ -112,37 +174,29 @@ export class UserService {
         secret: this.configService.get('JWT_SECRET'),
       });
     } catch (error) {
-      throw new BadRequestException('Invalid or expired verification token.');
+      throw new HttpException(
+        'Invalid or expired verification token.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email: payload.email },
     });
 
-    if (existingUser) {
-      throw new BadRequestException('User already exists.');
+    if (!existingUser) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    const createdUser = await this.prisma.user.create({
-      data: {
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        gender: payload.gender,
-        phone: payload.phone,
-        email: payload.email,
-        password: payload.password,
-        imageUrl: payload.imageUrl,
-        streetNumber: payload.streetNumber,
-        street: payload.street,
-        city: payload.city,
-        postalCode: payload.postalCode,
-        province: payload.province,
-        country: payload.country,
-        role: payload.role,
-        status: 'ACTIVE',
-      },
+    const hashedPassword = await this.lib.hashPassword({
+      password,
+      round: 6,
     });
 
-    return { userId: createdUser.id };
+    const updatedUser = await this.prisma.user.update({
+      where: { email: payload.email },
+      data: { password: hashedPassword, isVerified: true },
+    });
+    return updatedUser;
   }
 }
