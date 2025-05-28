@@ -33,6 +33,7 @@ export class AuthService {
     const payload = { email: user.email, userType: user.userType, id: user.id };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow('JWT_SECRET'),
+      expiresIn: 2592000000,
     });
     // const refreshToken = this.jwtService.sign(payload, {
     //   secret: this.configService.getOrThrow('REFRESH_SECRET'),
@@ -83,7 +84,7 @@ export class AuthService {
 
     const token = this.jwtService.sign(
       { email: user.email, userType: user.userType, id: user.id },
-      { secret: this.configService.get('JWT_SECRET') },
+      { secret: this.configService.get('JWT_SECRET'), expiresIn: 2592000000 },
     );
     const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}/reset-password?token=${token}`;
     await this.mailerService.sendMail(

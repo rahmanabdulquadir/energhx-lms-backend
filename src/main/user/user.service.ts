@@ -80,7 +80,7 @@ export class UserService {
     });
     const token = this.jwtService.sign(
       { email: dto.email },
-      { secret: this.configService.get('JWT_SECRET'), expiresIn: '10m' },
+      { secret: this.configService.get('JWT_SECRET'), expiresIn: 2592000000 },
     );
 
     if (existingUser && !existingUser.isVerified) {
