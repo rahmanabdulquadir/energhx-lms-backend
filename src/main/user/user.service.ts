@@ -22,13 +22,13 @@ export class UserService {
   // ------------------------------- Get Me -------------------------------
   public async getMe(user: TUser) {
     let result: Developer | Server | null;
-    if (user.role !== 'DEVELOPER' && user.role !== 'SERVER') {
+    if (user.userType !== 'DEVELOPER' && user.userType !== 'SERVER') {
       throw new HttpException(
         'Invalid User role provided',
         HttpStatus.BAD_REQUEST,
       );
     }
-    if (user.role == 'DEVELOPER') {
+    if (user.userType == 'DEVELOPER') {
       result = await this.prisma.developer.findUniqueOrThrow({
         where: { userId: user.id },
         include: {
@@ -44,7 +44,7 @@ export class UserService {
           },
         },
       });
-    } else if (user.role == 'SERVER') {
+    } else if (user.userType == 'SERVER') {
       result = await this.prisma.server.findUniqueOrThrow({
         where: { userId: user.id },
         include: {
