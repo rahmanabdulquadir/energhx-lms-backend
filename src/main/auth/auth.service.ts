@@ -85,7 +85,7 @@ export class AuthService {
       { email: user.email, userType: user.userType, id: user.id },
       { secret: this.configService.get('JWT_SECRET') },
     );
-    const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}?token=${token}`;
+    const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}/reset-password?token=${token}`;
     await this.mailerService.sendMail(
       user.email,
       `<div>
