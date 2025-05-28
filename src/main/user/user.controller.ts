@@ -107,7 +107,7 @@ export class UserController {
     @Res() res: Response,
     @Body() body: CreatePasswordDto,
   ) {
-    const result = await this.userService.createPassword(body.password, token);
+    const result = await this.userService.createPassword(body, token);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

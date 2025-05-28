@@ -60,6 +60,9 @@ export class CreateUserDto {
 }
 
 export class CreatePasswordDto {
+  @IsEmail()
+  email: string;
+
   @IsString()
   @Length(6, 30)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,30}$/, {

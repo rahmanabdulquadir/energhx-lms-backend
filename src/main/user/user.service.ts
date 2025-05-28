@@ -163,7 +163,10 @@ export class UserService {
     return null;
   }
   // ------------------------------- Create Password -------------------------------
-  public async createPassword(password: string, token: string) {
+  public async createPassword(
+    data: { email: string; password: string },
+    token: string,
+  ) {
     let payload: any;
 
     try {
@@ -177,6 +180,12 @@ export class UserService {
       );
     }
 
+    if (data.email !== payload.email)
+      throw new HttpException(
+        'Invalid Email Provided!',
+        HttpStatus.UNAUTHORIZED,
+      );
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email: payload.email },
     });
@@ -186,7 +195,7 @@ export class UserService {
     }
 
     const hashedPassword = await this.lib.hashPassword({
-      password,
+      password: data.password,
       round: 6,
     });
 
