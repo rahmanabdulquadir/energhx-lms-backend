@@ -194,6 +194,13 @@ export class UserService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
+    if (!!existingUser.password) {
+      throw new HttpException(
+        'Password already set for this user!',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
     const hashedPassword = await this.lib.hashPassword({
       password: data.password,
       round: 6,
