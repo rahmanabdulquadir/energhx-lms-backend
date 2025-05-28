@@ -29,18 +29,9 @@ export class CreateUserDto {
   @IsEnum(Gender)
   sex: Gender;
 
-  @IsString()
-  @Matches(/^[0-9]{10,15}$/, {
-    message: 'Phone number must be between 10 to 15 digits.',
-  })
-  phoneNumber: string;
-
   @IsOptional()
   @IsString()
-  @Matches(/^[0-9]{10,15}$/, {
-    message: 'Alternate phone number must be between 10 to 15 digits.',
-  })
-  alternatePhoneNumber?: string;
+  companyName: string;
 
   @IsOptional()
   @IsString()

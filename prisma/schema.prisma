@@ -8,16 +8,15 @@ datasource db {
 }
 
 model User {
-  id                   String  @id @default(uuid())
-  email                String  @unique
-  firstName            String
-  lastName             String
-  otherName            String?
-  sex                  Gender
-  phoneNumber          String
-  alternatePhoneNumber String?
-  password             String?
-  profile_photo        String?
+  id            String  @id @default(uuid())
+  email         String  @unique
+  firstName     String
+  lastName      String
+  otherName     String?
+  sex           Gender
+  password      String?
+  profile_photo String?
+  companyName   String
 
   streetNumber Int
   street       String
