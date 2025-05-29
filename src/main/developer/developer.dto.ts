@@ -12,8 +12,9 @@ class ReferenceDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  document: string;
+  document?: string;
 }
 
 class PublicationDto {
@@ -50,7 +51,7 @@ class ExperienceDto {
   endDate: string;
 }
 
-export class CreateDeveloperProfileDto {
+export class CreateProfileDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => ReferenceDto)

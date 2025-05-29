@@ -58,8 +58,9 @@ model State {
 }
 
 model Developer {
-  id    String @id @default(uuid())
-  email String @unique
+  id     String @id @default(uuid())
+  email  String @unique
+  status Status @default(ACTIVE)
 
   reference    Reference?
   publications Publication[]
@@ -70,8 +71,9 @@ model Developer {
 }
 
 model Server {
-  id    String @id @default(uuid())
-  email String @unique
+  id     String @id @default(uuid())
+  email  String @unique
+  status Status @default(ACTIVE)
 
   reference    Reference?
   publications Publication[]

@@ -85,13 +85,11 @@ export class UserController {
       const uploaded = await this.lib.uploadToCloudinary({
         fileName: file.filename,
         path: file.path,
-        type: 'image',
       });
       if (uploaded?.secure_url) {
         createUserDto.profile_photo = uploaded.secure_url;
       }
     }
-    console.log(createUserDto);
 
     const result = await this.userService.registerUser(createUserDto);
     return res.status(201).json({

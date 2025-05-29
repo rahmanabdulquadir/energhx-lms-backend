@@ -26,8 +26,13 @@ export class AuthService {
     });
 
     if (!user) throw new HttpException('User not found', 401);
+    if (!user.password)
+      throw new HttpException(
+        'Please create a password first. Verify your mail',
+        HttpStatus.BAD_REQUEST,
+      );
 
-    const isCorrectPassword = await bcrypt.compare(password, user.password);
+    const isCorrectPassword = bcrypt.compare(password, user.password);
     if (!isCorrectPassword) throw new HttpException('Invalid credentials', 401);
 
     const payload = { email: user.email, userType: user.userType, id: user.id };
@@ -53,9 +58,9 @@ export class AuthService {
       },
     });
 
-    const isCorrectPassword: boolean = await bcrypt.compare(
+    const isCorrectPassword = bcrypt.compare(
       payload.oldPassword,
-      userData.password,
+      userData.password as string,
     );
     if (!isCorrectPassword) {
       throw new Error('Password is incorrect');

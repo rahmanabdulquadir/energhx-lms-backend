@@ -1,13 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateDeveloperProfileDto } from './developer.dto';
+import { CreateProfileDto } from './developer.dto';
 
 @Injectable()
 export class DeveloperService {
   constructor(private readonly prisma: PrismaService) {}
 
   // -------------------------------- Create Developer --------------------------------
-  public async createDeveloper(id: string, payload: CreateDeveloperProfileDto) {
+  public async createDeveloper(id: string, payload: CreateProfileDto) {
     const existingDeveloper = await this.prisma.developer.findUnique({
       where: { id },
     });
@@ -17,7 +17,11 @@ export class DeveloperService {
 
     // 1. Create Reference if it exists
     if (reference) {
-      // console.log('Reference -> ', reference);
+      if (!reference.document)
+        throw new HttpException(
+          'Document must be provided!',
+          HttpStatus.BAD_REQUEST,
+        );
       const ref = await this.prisma.reference.create({
         data: {
           name: reference.name,
@@ -63,10 +67,27 @@ export class DeveloperService {
   public async getASingleDeveloper(id: string) {
     const existingDeveloper = await this.prisma.developer.findUnique({
       where: { id },
+      include: {
+        experiences: true,
+        reference: true,
+        publications: true,
+      },
     });
     if (!existingDeveloper)
       throw new HttpException('Developer not found!', HttpStatus.NOT_FOUND);
-    console.log('From Service -> ', existingDeveloper);
+    return existingDeveloper;
+  }
+
+  public async getAllDevelopersFromDB() {
+    const existingDeveloper = await this.prisma.developer.findMany({
+      include: {
+        experiences: true,
+        reference: true,
+        publications: true,
+      },
+    });
+    if (!existingDeveloper || existingDeveloper.length == 0)
+      throw new HttpException('Developer not found!', HttpStatus.NOT_FOUND);
     return existingDeveloper;
   }
 }

@@ -30,34 +30,16 @@ export class UserService {
     }
     if (user.userType == 'DEVELOPER') {
       result = await this.prisma.developer.findUniqueOrThrow({
-        where: { userId: user.id },
+        where: { userId: user.id, status: 'ACTIVE' },
         include: {
-          user: {
-            select: {
-              email: true,
-              id: true,
-              userType: true,
-              status: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
+          user: true,
         },
       });
     } else if (user.userType == 'SERVER') {
       result = await this.prisma.server.findUniqueOrThrow({
-        where: { userId: user.id },
+        where: { userId: user.id, status: 'ACTIVE' },
         include: {
-          user: {
-            select: {
-              email: true,
-              id: true,
-              userType: true,
-              status: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
+          user: true,
         },
       });
     } else result = null;
@@ -66,9 +48,7 @@ export class UserService {
 
   // ------------------------------- Get All Users -------------------------------
   public async getAllUsers() {
-    const result = await this.prisma.user.findMany({
-      where: { isVerified: true },
-    });
+    const result = await this.prisma.user.findMany();
     console.log(result);
     return result;
   }

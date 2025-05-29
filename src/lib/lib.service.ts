@@ -7,16 +7,28 @@ import {
 } from 'cloudinary';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
+import * as mime from 'mime-types';
 
 @Injectable()
 export class LibService {
   private readonly logger = new Logger(LibService.name);
+  private getResourceType(path: string): 'image' | 'video' | 'raw' {
+    const mimeType = mime.lookup(path) || '';
+
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    return 'raw';
+  }
 
   constructor(private readonly configService: ConfigService) {
     cloudinary.config({
-      cloud_name: this.configService.getOrThrow<string>('CLOUDINARY_CLOUD_NAME'),
+      cloud_name: this.configService.getOrThrow<string>(
+        'CLOUDINARY_CLOUD_NAME',
+      ),
       api_key: this.configService.getOrThrow<string>('CLOUDINARY_API_KEY'),
-      api_secret: this.configService.getOrThrow<string>('CLOUDINARY_API_SECRET'),
+      api_secret: this.configService.getOrThrow<string>(
+        'CLOUDINARY_API_SECRET',
+      ),
     });
   }
 
@@ -43,18 +55,17 @@ export class LibService {
   public async uploadToCloudinary({
     fileName,
     path,
-    type = 'image',
   }: {
     fileName: string;
     path: string;
-    type?: string;
   }): Promise<UploadApiResponse> {
+    const resourceType = this.getResourceType(path);
+
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
         path,
-        { public_id: fileName, resource_type: type === 'image' ? 'auto' : 'raw' },
+        { public_id: fileName, resource_type: resourceType },
         (error, result) => {
-          // Always remove file from local disk
           fs.unlink(path, (err) => {
             if (err) this.logger.error(`Error deleting local file: ${err}`);
             else this.logger.log('Local file deleted successfully.');
