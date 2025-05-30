@@ -13,6 +13,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailerService } from './utils/sendMail';
 import { CountryModule } from './main/country/country.module';
 import { ProgramModule } from './main/program/program.module';
+import { CourseModule } from './main/course/course.module';
+import { ModuleModule } from './main/module/module.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { ProgramModule } from './main/program/program.module';
     }),
     CountryModule,
     ProgramModule,
+    CourseModule,
+    ModuleModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, UserService, MailerService],

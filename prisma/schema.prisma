@@ -133,7 +133,7 @@ model Program {
   title        String
   price        Float
   publishedFor UserRole
-  Course       Course[]
+  course       Course[]
   // payment      Payment[]
 }
 

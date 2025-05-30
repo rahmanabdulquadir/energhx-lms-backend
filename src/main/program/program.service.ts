@@ -16,8 +16,16 @@ export class ProgramService {
 
   // ------------------------------------Get Single Program-------------------------------------
   public async getSingleProgram(id: string) {
+    const program = await this.prisma.program.findUnique({
+      where: { id },
+    });
+    if (!program) throw new HttpException('Program Not Found', 404);
+
     const result = await this.prisma.program.findUnique({
       where: { id },
+      include: {
+        course: true,
+      },
     });
     return result;
   }
@@ -29,32 +37,28 @@ export class ProgramService {
   }
 
   //---------------------------------------Update Program--------------------------------------------
-  public async updateProgram(id: IdDto, data: UpdateProgramDto) {
-    const Program = await this.prisma.program.findUnique({
-      where: id,
+  public async updateProgram(id: string, data: UpdateProgramDto) {
+    const program = await this.prisma.program.findUnique({
+      where: { id },
     });
-    if (!Program) throw new HttpException('Program Not Found', 404);
+    if (!program) throw new HttpException('Program Not Found', 404);
 
-    const updated = await this.prisma.program.update({
-      where: id,
+    const result = await this.prisma.program.update({
+      where: { id },
       data,
     });
-
-    return {
-      success: true,
-      message: 'Program updated successfully',
-      statusCode: HttpStatus.OK,
-      data: updated,
-    };
+    return result;
   }
 
   //-------------------------------------Delete Program-----------------------------------------
-  public async deleteProgram(ProgramId: string) {
-    return {
-      statusCode: 200,
-      success: true,
-      message: 'Program deleted successfully',
-      data: null,
-    };
+  public async deleteProgram(id: string) {
+    const program = await this.prisma.program.findUnique({
+      where: { id },
+    });
+    if (!program) throw new HttpException('Program Not Found', 404);
+    const result = await this.prisma.program.delete({
+      where: { id },
+    });
+    return result;
   }
 }

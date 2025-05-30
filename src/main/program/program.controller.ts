@@ -43,10 +43,7 @@ export class ProgramController {
   // Get single Program
   @Get(':id')
   @UseGuards(AuthGuard)
-  public async getSingleProgram(
-    @Res() res: Response,
-    @Param() param: IdDto,
-  ) {
+  public async getSingleProgram(@Res() res: Response, @Param() param: IdDto) {
     const result = await this.programService.getSingleProgram(param.id);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
@@ -59,7 +56,7 @@ export class ProgramController {
   // Get all Programs
   @Get()
   async getAllPrograms(@Res() res: Response, @Req() req: Request) {
-    const result = this.programService.getAllPrograms();
+    const result = await this.programService.getAllPrograms();
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -73,10 +70,10 @@ export class ProgramController {
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async updateProgram(
     @Res() res: Response,
-    @Param() id: IdDto,
+    @Param() param: IdDto,
     @Body() data: UpdateProgramDto,
   ) {
-    const result = await this.programService.updateProgram(id, data);
+    const result = await this.programService.updateProgram(param.id, data);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
