@@ -15,6 +15,7 @@ import { CountryModule } from './main/country/country.module';
 import { ProgramModule } from './main/program/program.module';
 import { CourseModule } from './main/course/course.module';
 import { ModuleModule } from './main/module/module.module';
+import { ContentModule } from './main/content/content.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ModuleModule } from './main/module/module.module';
     ProgramModule,
     CourseModule,
     ModuleModule,
+    ContentModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, UserService, MailerService],

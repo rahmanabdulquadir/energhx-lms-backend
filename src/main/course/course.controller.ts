@@ -64,7 +64,7 @@ export class CourseController {
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
-      message: 'All Courses retrieved successfully',
+      message: 'All courses retrieved successfully',
       data: result,
     });
   }
