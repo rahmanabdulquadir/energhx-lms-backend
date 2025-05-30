@@ -53,9 +53,10 @@ class ExperienceDto {
 
 export class CreateProfileDto {
   @IsOptional()
-  @ValidateNested()
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => ReferenceDto)
-  reference?: ReferenceDto;
+  reference?: ReferenceDto[];
 
   @IsOptional()
   @IsArray()

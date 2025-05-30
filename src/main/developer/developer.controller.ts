@@ -6,7 +6,7 @@ import {
   Post,
   Req,
   Res,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import sendResponse from 'src/utils/sendResponse';
@@ -30,16 +30,15 @@ export class DeveloperController {
 
   // Create Developer Profile
   @Post('/profile/:id')
-  @UploadInterceptor('file')
+  @UploadInterceptor('files', 10)
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER]))
   async createDeveloper(
     @Body('text') text: string,
-    @UploadedFile() file: any,
+    @UploadedFiles() files: any,
     @Req() req: Request,
     @Res() res: Response,
   ) {
     let developerProfileDto: any;
-    console.log(text, file);
     const parsed = JSON.parse(text);
     developerProfileDto = plainToInstance(CreateProfileDto, parsed);
 
@@ -54,16 +53,27 @@ export class DeveloperController {
         })),
       });
     }
-
-    if (file) {
-      const uploaded = await this.lib.uploadToCloudinary({
-        fileName: file.filename,
-        path: file.path,
-      });
-      if (uploaded?.secure_url) {
-        developerProfileDto.reference.document = uploaded.secure_url;
+    console.log(files);
+    if (files?.length) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploaded = await this.lib.uploadToCloudinary({
+          fileName: file.filename,
+          path: file.path,
+        });
+        if (uploaded?.secure_url) {
+          if (
+            developerProfileDto.reference &&
+            Array.isArray(developerProfileDto.reference) &&
+            developerProfileDto.reference[i]
+          ) {
+            developerProfileDto.reference[i].document = uploaded.secure_url;
+          }
+        }
       }
     }
+
+    console.log(developerProfileDto);
     const result = await this.developerService.createDeveloper(
       req.params.id,
       developerProfileDto,

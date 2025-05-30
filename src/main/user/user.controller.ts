@@ -92,9 +92,10 @@ export class UserController {
     }
 
     const result = await this.userService.registerUser(createUserDto);
-    return res.status(201).json({
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
       success: true,
-      message: 'Please check your email to verify your account',
+      message: 'Please check your email to verify your account!',
       data: result,
     });
   }

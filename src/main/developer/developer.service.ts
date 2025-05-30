@@ -16,21 +16,22 @@ export class DeveloperService {
     const { reference, publications, experiences } = payload;
 
     // 1. Create Reference if it exists
-    if (reference) {
-      if (!reference.document)
-        throw new HttpException(
-          'Document must be provided!',
-          HttpStatus.BAD_REQUEST,
-        );
-      const ref = await this.prisma.reference.create({
-        data: {
-          name: reference.name,
-          document: reference.document,
+    if (reference?.length) {
+      for (const ref of reference) {
+        if (!ref.document) {
+          throw new HttpException(
+            `You must provide document for ${ref.name}!`,
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      }
+      await this.prisma.reference.createMany({
+        data: reference.map((ref) => ({
+          ...ref,
           developerId: id,
-        },
+          document: ref.document as string,
+        })),
       });
-
-      console.log(ref);
     }
 
     // 2. Create Publications if any
@@ -57,7 +58,7 @@ export class DeveloperService {
       where: { id },
       include: {
         experiences: true,
-        reference: true,
+        references: true,
         publications: true,
       },
     });
@@ -69,7 +70,7 @@ export class DeveloperService {
       where: { id },
       include: {
         experiences: true,
-        reference: true,
+        references: true,
         publications: true,
       },
     });
@@ -82,7 +83,7 @@ export class DeveloperService {
     const existingDeveloper = await this.prisma.developer.findMany({
       include: {
         experiences: true,
-        reference: true,
+        references: true,
         publications: true,
       },
     });

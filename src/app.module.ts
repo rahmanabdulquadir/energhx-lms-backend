@@ -12,6 +12,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MailerService } from './utils/sendMail';
 import { CountryModule } from './main/country/country.module';
+import { ProgramModule } from './main/program/program.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CountryModule } from './main/country/country.module';
       global: true, // This makes JwtService available globally
     }),
     CountryModule,
+    ProgramModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, UserService, MailerService],
