@@ -16,6 +16,9 @@ import { ProgramModule } from './main/program/program.module';
 import { CourseModule } from './main/course/course.module';
 import { ModuleModule } from './main/module/module.module';
 import { ContentModule } from './main/content/content.module';
+import { QuizModule } from './main/quiz/quiz.module';
+import { PaymentModule } from './main/payment/payment.module';
+import { ReviewModule } from './main/review/review.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { ContentModule } from './main/content/content.module';
     CourseModule,
     ModuleModule,
     ContentModule,
+    QuizModule,
+    PaymentModule,
+    ReviewModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService, UserService, MailerService],

@@ -36,8 +36,8 @@ model User {
   developer  Developer?
   server     Server?
 
-  review               Review[]
-  AssignmentSubmission AssignmentSubmission[]
+  reviews         Review[]
+  quizSubmissions QuizSubmission[]
   // Progress             Progress[]
 }
 
@@ -168,51 +168,59 @@ model Module {
 }
 
 model Content {
-  id          String      @id @default(uuid())
+  id          String        @id @default(uuid())
   title       String
   contentType ContentType
   video       String?
   description String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  assignment  Assignment?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  quiz        QuizInstance?
   // Progress    Progress?
 
   moduleId String
   module   Module @relation(fields: [moduleId], references: [id])
 }
 
-model Assignment {
+model Quiz {
+  id            String   @id @default(uuid())
+  question      String
+  options       String[]
+  correctAnswer Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  quizInstanceId String
+  quizInstance   QuizInstance @relation(fields: [quizInstanceId], references: [id])
+}
+
+model QuizInstance {
   id        String   @id @default(uuid())
-  title     String
-  deadline  DateTime
   totalMark Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignmentSubmission AssignmentSubmission[]
+  quizzes         Quiz[] // QuizInstance contains several quizzes
+  quizSubmissions QuizSubmission[] // QuizInstance contains several userQuizSubmissions.
 
   contentId String  @unique
   content   Content @relation(fields: [contentId], references: [id])
 }
 
-model AssignmentSubmission {
-  id               String           @id @default(uuid())
-  submissionTime   DateTime
-  submissionStatus SubmissionStatus
-  submission       String
-  acquiredMark     Int              @default(0)
-  isSubmitted      Boolean          @default(false)
-  isReviewed       Boolean          @default(false)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+model QuizSubmission {
+  id               String   @id @default(uuid())
+  correctAnswers   Int
+  incorrectAnswers Int
+  isCompleted      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  assignmentId String
-  assignment   Assignment @relation(fields: [assignmentId], references: [id])
-  userId       String
-  user         User       @relation(fields: [userId], references: [id])
+  quizInstanceId String
+  quizInstance   QuizInstance @relation(fields: [quizInstanceId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
 
-  @@unique([assignmentId, userId])
+  @@unique([quizInstanceId, userId]) // Ensures a user has only one submission per quiz instance
 }
 
 // model Progress {
@@ -251,7 +259,6 @@ enum UserRole {
 enum Status {
   BLOCKED
   ACTIVE
-  DELETED
 }
 
 enum Gender {
@@ -262,7 +269,7 @@ enum Gender {
 enum ContentType {
   VIDEO
   DESCRIPTION
-  ASSIGNMENT
+  QUIZ
 }
 
 enum SubmissionStatus {

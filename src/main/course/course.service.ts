@@ -19,10 +19,10 @@ export class CourseService {
     return course;
   }
 
-  // ------------------------------------Get Single Course-------------------------------------
+  // --------------------------------Get Single Course-----------------------------------
   public async getSingleCourse(id: string) {
     const course = await this.prisma.course.findUnique({
-      where: { id },
+      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
     });
     if (!course) throw new HttpException('Course Not Found', 404);
 
@@ -35,13 +35,13 @@ export class CourseService {
     return result;
   }
 
-  //--------------------------------------Get All Courses------------------------------------------
+  //----------------------------------Get All Courses---------------------------------------
   public async getAllCourses() {
     const result = await this.prisma.course.findMany();
     return result;
   }
 
-  //---------------------------------------Update Course--------------------------------------------
+  //------------------------------------Update Course---------------------------------------
   public async updateCourse(id: string, data: UpdateCourseDto) {
     const course = await this.prisma.course.findUnique({
       where: { id },

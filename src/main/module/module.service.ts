@@ -22,7 +22,7 @@ export class ModuleService {
   // ------------------------------------Get Single Module-------------------------------------
   public async getSingleModule(id: string) {
     const module = await this.prisma.module.findUnique({
-      where: { id },
+      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
     });
     if (!module) throw new HttpException('Module Not Found', 404);
 

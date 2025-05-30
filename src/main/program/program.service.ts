@@ -14,7 +14,7 @@ export class ProgramService {
     return result;
   }
 
-  // ------------------------------------Get Single Program-------------------------------------
+  // --------------------------------Get Single Program---------------------------------
   public async getSingleProgram(id: string) {
     const program = await this.prisma.program.findUnique({
       where: { id },
@@ -22,7 +22,7 @@ export class ProgramService {
     if (!program) throw new HttpException('Program Not Found', 404);
 
     const result = await this.prisma.program.findUnique({
-      where: { id },
+      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
       include: {
         course: true,
       },
@@ -30,13 +30,13 @@ export class ProgramService {
     return result;
   }
 
-  //--------------------------------------Get All Programs------------------------------------------
+  //----------------------------------Get All Programs--------------------------------------
   public async getAllPrograms() {
     const result = await this.prisma.program.findMany();
     return result;
   }
 
-  //---------------------------------------Update Program--------------------------------------------
+  //-------------------------------------Update Program------------------------------------
   public async updateProgram(id: string, data: UpdateProgramDto) {
     const program = await this.prisma.program.findUnique({
       where: { id },
@@ -50,7 +50,7 @@ export class ProgramService {
     return result;
   }
 
-  //-------------------------------------Delete Program-----------------------------------------
+  //--------------------------------Delete Program--------------------------------------
   public async deleteProgram(id: string) {
     const program = await this.prisma.program.findUnique({
       where: { id },

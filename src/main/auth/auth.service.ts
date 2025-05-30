@@ -87,10 +87,11 @@ export class AuthService {
     });
     if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
 
-    const token = this.jwtService.sign(
-      { email: user.email, userType: user.userType, id: user.id },
-      { secret: this.configService.get('JWT_SECRET'), expiresIn: 2592000000 },
-    );
+    const payload = { email: user.email, userType: user.userType, id: user.id };
+    const token = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: 2592000000,
+    });
     const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}/reset-password?token=${token}`;
     await this.mailerService.sendMail(
       user.email,
@@ -121,13 +122,7 @@ export class AuthService {
       where: { id: decoded.id },
     });
 
-    if (!user || user.status === 'DELETED') {
-      throw new HttpException(
-        'User not found or deleted',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     if (user.status === 'BLOCKED') {
       throw new HttpException('This user is blocked!', HttpStatus.FORBIDDEN);
     }

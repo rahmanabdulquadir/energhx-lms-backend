@@ -35,9 +35,6 @@ export class AuthGuard implements CanActivate {
       if (!user) {
         throw new HttpException('User not found!', 404);
       }
-      if (user?.status === 'DELETED') {
-        throw new HttpException('User is deleted!', 403);
-      }
       if (user?.status === 'BLOCKED') {
         throw new HttpException('User is blocked!', 403);
       }
