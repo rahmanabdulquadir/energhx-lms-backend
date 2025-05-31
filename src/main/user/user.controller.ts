@@ -11,6 +11,7 @@ import {
   UsePipes,
   ValidationPipe,
   UploadedFile,
+  Param,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from 'src/guard/auth.guard';
@@ -21,6 +22,8 @@ import { UploadInterceptor } from 'src/common/upload.interceptor';
 import { LibService } from 'src/lib/lib.service';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { RoleGuardWith } from 'src/utils/RoleGuardWith';
+import { UserRole } from '@prisma/client';
 
 @Controller('user')
 export class UserController {
@@ -43,7 +46,7 @@ export class UserController {
   }
 
   @Get('/')
-  // @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   async getAllUsers(@Res() res: Response) {
     const result = await this.userService.getAllUsers();
     sendResponse(res, {
@@ -111,6 +114,35 @@ export class UserController {
       statusCode: HttpStatus.OK,
       success: true,
       message: 'User registered successfully',
+      data: result,
+    });
+  }
+
+  //
+  @Post('progress/:courseId/:contentId')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
+  async setProgress(@Param() param, @Req() req: Request, @Res() res: Response) {
+    const result = await this.userService.setProgress(
+      param.courseId,
+      req.user,
+      param.contentId,
+    );
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Progress calculated successfully.',
+      data: result,
+    });
+  }
+
+  @Get('progress/:courseId')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
+  async getProgress(@Param() param, @Req() req: Request, @Res() res: Response) {
+    const result = await this.userService.getProgress(param.courseId, req.user);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Progress retrieved successfully',
       data: result,
     });
   }

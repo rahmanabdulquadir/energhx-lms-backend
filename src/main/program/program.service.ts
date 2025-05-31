@@ -24,7 +24,7 @@ export class ProgramService {
     const result = await this.prisma.program.findUnique({
       where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
       include: {
-        course: true,
+        courses: true,
       },
     });
     return result;
@@ -52,13 +52,87 @@ export class ProgramService {
 
   //--------------------------------Delete Program--------------------------------------
   public async deleteProgram(id: string) {
-    const program = await this.prisma.program.findUnique({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const program = await tx.program.findUnique({
+        where: { id },
+        include: {
+          courses: {
+            include: {
+              modules: {
+                include: {
+                  contents: {
+                    include: {
+                      quiz: {
+                        include: {
+                          quizzes: true,
+                          quizSubmissions: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              reviews: true,
+              progresses: true,
+            },
+          },
+          enrolledUsers: true,
+        },
+      });
+
+      if (!program) {
+        throw new HttpException('Program not found', 404);
+      }
+
+      for (const course of program.courses) {
+        for (const module of course.modules) {
+          for (const content of module.contents) {
+            if (content.quiz) {
+              await tx.quizSubmission.deleteMany({
+                where: { quizInstanceId: content.quiz.id },
+              });
+
+              await tx.quiz.deleteMany({
+                where: { quizInstanceId: content.quiz.id },
+              });
+
+              await tx.quizInstance.delete({
+                where: { id: content.quiz.id },
+              });
+            }
+
+            await tx.content.delete({
+              where: { id: content.id },
+            });
+          }
+
+          await tx.module.delete({
+            where: { id: module.id },
+          });
+        }
+
+        await tx.review.deleteMany({
+          where: { courseId: course.id },
+        });
+
+        await tx.progress.deleteMany({
+          where: { courseId: course.id },
+        });
+
+        await tx.course.delete({
+          where: { id: course.id },
+        });
+      }
+
+      await tx.userProgram.deleteMany({
+        where: { programId: id },
+      });
+
+      await tx.program.delete({
+        where: { id },
+      });
+
+      return null;
     });
-    if (!program) throw new HttpException('Program Not Found', 404);
-    const result = await this.prisma.program.delete({
-      where: { id },
-    });
-    return result;
   }
 }

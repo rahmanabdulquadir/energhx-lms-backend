@@ -75,6 +75,8 @@ export class UserService {
           <p>Click the button below to verify your email and complete registration. This link will expire in 10 minutes.</p>
           <p><a href="${verificationLink}"><button>Verify Email</button></a></p>
         </div>`,
+        'Email Verification Link 🔗',
+        'Click on the link to verify email, and create your password. Link expires in 10 minutes.',
       );
 
       return null;
@@ -138,10 +140,13 @@ export class UserService {
         <p>Click the button below to verify your email and complete registration. This link will expire in 10 minutes.</p>
         <p><a href="${verificationLink}"><button>Verify Email</button></a></p>
       </div>`,
+      'Email Verification Link 🔗',
+      'Click on the link to verify email, and create your password. Link expires in 10 minutes.',
     );
 
     return null;
   }
+
   // ------------------------------- Create Password -------------------------------
   public async createPassword(
     data: { email: string; password: string },
@@ -191,5 +196,198 @@ export class UserService {
       data: { password: hashedPassword, isVerified: true },
     });
     return updatedUser;
+  }
+
+  //----------------------------------------Set Progress--------------------------------------------------
+  public async setProgress(courseId: string, user: TUser, contentId: string) {
+    // Check if user exists and currently enrolled in the requested course or not
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: user.id, status: 'ACTIVE' },
+      include: {
+        enrolledPrograms: true,
+      },
+    });
+    if (!existingUser)
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    // if (existingUser.enrolledPrograms.length == 0)
+    //   throw new HttpException(
+    //     'No enrolled courses found for this user',
+    //     HttpStatus.NOT_FOUND,
+    //   );
+    const courseProgram = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        programId: true,
+      },
+    });
+
+    if (!courseProgram?.programId) {
+      throw new HttpException(
+        'Course not found or has no associated program',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const isEnrolled = await this.prisma.userProgram.findUnique({
+      where: {
+        userId_programId: {
+          userId: user.id,
+          programId: courseProgram?.programId!,
+        },
+      },
+    });
+    // if (!isEnrolled)
+    //   throw new HttpException(
+    //     'You are not enrolled in this course',
+    //     HttpStatus.BAD_REQUEST,
+    //   );
+
+    // Arrange an array of content for the course
+    const modules = await this.prisma.module.findMany({
+      where: { courseId },
+      include: {
+        contents: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true },
+        },
+      },
+    });
+    const contentIds = modules.flatMap((module) =>
+      module.contents.map((content) => content.id),
+    );
+
+    console.log(contentIds);
+
+    // If requested content does not exist in the course, throe error
+    const index = contentIds.findIndex((content) => content === contentId);
+    if (index === -1)
+      throw new HttpException('Content not found in enrolled courses.', 401);
+
+    // If user tries to jump
+    const existingProgress = await this.prisma.progress.findUnique({
+      where: { userId_courseId: { userId: user.id, courseId } },
+    });
+    if (!existingProgress && contentIds[0] !== contentId)
+      throw new HttpException(
+        'This content is locked. Start from the first content.',
+        403,
+      );
+
+    const prevIndex = contentIds.findIndex(
+      (content) => content === existingProgress?.contentId,
+    );
+    if (existingProgress && index - 1 > prevIndex)
+      throw new HttpException(
+        'This content is locked. Please complete previous contents first.',
+        403,
+      );
+    if (existingProgress && index - 1 !== prevIndex)
+      throw new HttpException('Already watched!', 403);
+
+    const percentage = Math.round(((index + 1) / contentIds.length) * 100);
+    await this.prisma.progress.upsert({
+      where: { userId_courseId: { userId: user.id, courseId } },
+      update: { percentage, contentId },
+      create: { userId: user.id, courseId, percentage, contentId },
+    });
+    const watchedContents = contentIds.slice(0, index + 1);
+    return {
+      watchedContents,
+      percentage,
+    };
+  }
+
+  //----------------------------------------Get Progress-------------------------------------------------
+  public async getProgress(courseId: string, user: TUser) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: user.id, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!existingUser) {
+      throw new HttpException('User not found', 404);
+    }
+
+    // Check if the student is enrolled in the program (optional)
+    const isProgramEnrolled = await this.prisma.userProgram.findFirst({
+      where: {
+        userId: user.id,
+        program: {
+          courses: {
+            some: {
+              id: courseId,
+            },
+          },
+        },
+      },
+    });
+
+    // if (!isProgramEnrolled) {
+    //   throw new HttpException(
+    //     'You are not enrolled in this course',
+    //     HttpStatus.FORBIDDEN,
+    //   );
+    // }
+
+    const courseProgress = await this.prisma.progress.findUnique({
+      where: {
+        userId_courseId: {
+          userId: user.id,
+          courseId,
+        },
+      },
+      select: {
+        percentage: true,
+        contentId: true,
+      },
+    });
+
+    // Get ordered contents of the course
+    const modules = await this.prisma.module.findMany({
+      where: { courseId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        contents: {
+          orderBy: { createdAt: 'asc' },
+          select: { id: true },
+        },
+      },
+    });
+
+    const contentIds = modules.flatMap((module) =>
+      module.contents.map((content) => content.id),
+    );
+
+    if (!courseProgress) {
+      return { watchedContents: [], percentage: 0 };
+    }
+
+    const currentIndex = contentIds.findIndex(
+      (cid) => cid === courseProgress.contentId,
+    );
+
+    const watchedContents = contentIds.slice(0, currentIndex + 1);
+    const recalculatedPercentage =
+      contentIds.length === 0
+        ? 0
+        : Math.round(((currentIndex + 1) / contentIds.length) * 100);
+
+    if (recalculatedPercentage !== courseProgress.percentage) {
+      await this.prisma.progress.update({
+        where: {
+          userId_courseId: {
+            userId: user.id,
+            courseId,
+          },
+        },
+        data: {
+          percentage: recalculatedPercentage,
+        },
+      });
+    }
+
+    return {
+      watchedContents,
+      percentage: recalculatedPercentage,
+    };
   }
 }

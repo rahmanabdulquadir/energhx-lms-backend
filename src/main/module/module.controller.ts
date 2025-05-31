@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
   Param,
@@ -74,15 +75,15 @@ export class ModuleController {
   }
 
   // Delete Module
-  //   @Delete(':id')
-  //   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
-  //   public async deleteModule(@Res() res: Response, @Param() param: IdDto) {
-  //     const result = await this.ModuleService.deleteModule(param.id);
-  //     sendResponse(res, {
-  //         statusCode: HttpStatus.OK,
-  //         success: true,
-  //         message: 'Module deleted successfully',
-  //         data: result,
-  //       });
-  //   }
+  @Delete(':id')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  public async deleteModule(@Res() res: Response, @Param() param: IdDto) {
+    const result = await this.moduleService.deleteModule(param.id);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Module and associated data deleted successfully',
+      data: result,
+    });
+  }
 }

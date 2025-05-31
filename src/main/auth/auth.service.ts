@@ -106,6 +106,8 @@ export class AuthService {
               </a>
           </p>
       </div>`,
+      "Reset Password Link 🔗",
+      "Click on the link to reset your password. Link expires in 10 minutes."
     );
     return null;
   }

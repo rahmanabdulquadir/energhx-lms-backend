@@ -87,15 +87,15 @@ export class CourseController {
   }
 
   // Delete Course
-  //   @Delete(':id')
-  //   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
-  //   public async deleteCourse(@Res() res: Response, @Param() param: IdDto) {
-  //     const result = await this.courseService.deleteCourse(param.id);
-  //     sendResponse(res, {
-  //         statusCode: HttpStatus.OK,
-  //         success: true,
-  //         message: 'Course deleted successfully',
-  //         data: result,
-  //       });
-  //   }
+  @Delete(':id')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  public async deleteCourse(@Res() res: Response, @Param() param: IdDto) {
+    const result = await this.courseService.deleteCourse(param.id);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Course deleted successfully',
+      data: result,
+    });
+  }
 }

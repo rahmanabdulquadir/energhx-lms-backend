@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateContentDto, UpdateContentDto } from './content.dto';
 
@@ -33,4 +33,91 @@ export class ContentService {
 
     return updated;
   }
+
+  //---------------------------------------Delete Content--------------------------------------------
+  public async deleteContent(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const content = await tx.content.findUnique({
+        where: { id },
+        include: {
+          module: {
+            include: {
+              course: true,
+              contents: {
+                orderBy: { createdAt: 'asc' },
+                select: { id: true },
+              },
+            },
+          },
+          quiz: {
+            include: {
+              quizzes: true,
+              quizSubmissions: true,
+            },
+          },
+        },
+      });
+  
+      if (!content)
+        throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+  
+      const courseId = content.module.course.id;
+      const modules = await tx.module.findMany({
+        where: { courseId },
+        include: {
+          contents: {
+            orderBy: { createdAt: 'asc' },
+            select: { id: true },
+          },
+        },
+      });
+  
+      const orderedContentIds = modules.flatMap((mod) =>
+        mod.contents.map((c) => c.id),
+      );
+  
+      const deletedIndex = orderedContentIds.findIndex((cid) => cid === id);
+      const previousContentId = orderedContentIds[deletedIndex - 1] ?? null;
+  
+      const progressRecords = await tx.progress.findMany({
+        where: { courseId },
+      });
+  
+      for (const progress of progressRecords) {
+        if (progress.contentId === id) {
+          if (previousContentId) {
+            await tx.progress.update({
+              where: { userId_courseId: { userId: progress.userId, courseId } },
+              data: { contentId: previousContentId },
+            });
+          } else {
+            await tx.progress.delete({
+              where: { userId_courseId: { userId: progress.userId, courseId } },
+            });
+          }
+        }
+      }
+  
+      if (content.quiz) {
+        await tx.quizSubmission.deleteMany({
+          where: { quizInstanceId: content.quiz.id },
+        });
+  
+        await tx.quiz.deleteMany({
+          where: { quizInstanceId: content.quiz.id },
+        });
+  
+        await tx.quizInstance.delete({
+          where: { id: content.quiz.id },
+        });
+      }
+  
+      await tx.content.delete({
+        where: { id },
+      });
+  
+      return null;
+    });
+  }
+  
 }

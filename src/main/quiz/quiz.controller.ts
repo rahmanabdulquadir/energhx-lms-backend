@@ -64,13 +64,13 @@ export class QuizController {
   ) {
     const { quizSubmission, score, total } = await this.quizService.submitQuiz(
       answer,
-      req.user.id,
+      req.user,
     );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
       message: `Quiz submitted successfully. Score: ${score}/${total}`,
-      data: quizSubmission,
+      data: { quizSubmission, score, total },
     });
   }
 

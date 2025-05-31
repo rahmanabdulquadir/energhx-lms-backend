@@ -88,25 +88,38 @@ export class QuizService {
   //----------------------------------Submit Quiz-------------------------------------------
   public async submitQuiz(
     { answerSheet, contentId }: SubmitAnswerDto,
-    uid: string,
+    user: TUser,
   ) {
     // Check if the content exists
     const content = await this.prisma.content.findUnique({
       where: { id: contentId },
       include: {
         quiz: true,
-        module: true,
+        module: {
+          include: {
+            course: {
+              include: {
+                program: {
+                  select: {
+                    publishedFor: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
-    if (!content) {
+    if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
-    }
+    if (content.module.course.program.publishedFor !== user.userType)
+      throw new HttpException('Invalid Request', HttpStatus.BAD_REQUEST);
 
     // Check if the student is enrolled in the course
-    const isUserSubscribed = await this.prisma.user.findUnique({
-      where: { id: uid, status: 'ACTIVE' }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
+    const subscribedUser = await this.prisma.user.findUnique({
+      where: { id: user.id, status: 'ACTIVE' }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
     });
-    if (!isUserSubscribed) {
+    if (!subscribedUser) {
       throw new HttpException(
         'User not found or not enrolled in the course!',
         HttpStatus.NOT_FOUND,
@@ -126,7 +139,7 @@ export class QuizService {
     const existingSubmission = await this.prisma.quizSubmission.findFirst({
       where: {
         quizInstanceId: quizInstance.id,
-        userId: isUserSubscribed.id,
+        userId: subscribedUser.id,
       },
     });
     if (existingSubmission) {
@@ -147,7 +160,7 @@ export class QuizService {
     const quizSubmission = await this.prisma.quizSubmission.create({
       data: {
         quizInstanceId: quizInstance.id,
-        userId: isUserSubscribed.id,
+        userId: subscribedUser.id,
         correctAnswers,
         incorrectAnswers,
         isCompleted: true,
@@ -162,7 +175,7 @@ export class QuizService {
   }
 
   // ------------------------------Delete Single Quiz-------------------------------------
-  public async deleteQuiz(id : string) {
+  public async deleteQuiz(id: string) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id },
     });

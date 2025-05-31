@@ -29,7 +29,7 @@ export class CourseService {
     const result = await this.prisma.course.findUnique({
       where: { id },
       include: {
-        module: true,
+        modules: true,
       },
     });
     return result;
@@ -54,5 +54,80 @@ export class CourseService {
     });
 
     return updated;
+  }
+
+  //------------------------------------Delete Course---------------------------------------
+  public async deleteCourse(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const course = await tx.course.findUnique({
+        where: { id },
+        include: {
+          modules: {
+            include: {
+              contents: {
+                include: {
+                  quiz: {
+                    include: {
+                      quizzes: true,
+                      quizSubmissions: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          reviews: true,
+          progresses: true,
+        },
+      });
+
+      if (!course) {
+        throw new HttpException('Course not found', 404);
+      }
+
+      // 1. Delete progresses
+      await tx.progress.deleteMany({
+        where: { courseId: id },
+      });
+
+      // 2. Delete quizzes and quiz submissions
+      for (const module of course.modules) {
+        for (const content of module.contents) {
+          if (content.quiz) {
+            await tx.quizSubmission.deleteMany({
+              where: { quizInstanceId: content.quiz.id },
+            });
+
+            await tx.quiz.deleteMany({
+              where: { quizInstanceId: content.quiz.id },
+            });
+
+            await tx.quizInstance.delete({
+              where: { id: content.quiz.id },
+            });
+          }
+
+          await tx.content.delete({
+            where: { id: content.id },
+          });
+        }
+
+        await tx.module.delete({
+          where: { id: module.id },
+        });
+      }
+
+      // 3. Delete reviews
+      await tx.review.deleteMany({
+        where: { courseId: id },
+      });
+
+      // 4. Finally, delete the course
+      await tx.course.delete({
+        where: { id },
+      });
+
+      return { message: 'Course and related data deleted successfully' };
+    });
   }
 }

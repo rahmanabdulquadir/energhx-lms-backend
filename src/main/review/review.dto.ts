@@ -1,10 +1,19 @@
-import { IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateReviewDto {
   @IsString()
   comment: string;
 
   @IsNumber()
+  @Max(5)
+  @Min(0)
   rating: number;
 
   @IsUUID()
@@ -18,5 +27,7 @@ export class UpdateReviewDto {
 
   @IsOptional()
   @IsNumber()
+  @Max(5)
+  @Min(0)
   rating: number;
 }

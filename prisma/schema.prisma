@@ -22,11 +22,10 @@ model User {
   street       String
   postalCode   Int
   city         String
-
-  countryId String
-  country   Country @relation(fields: [countryId], references: [id])
-  stateId   String
-  State     State   @relation(fields: [stateId], references: [id])
+  countryId    String
+  country      Country @relation(fields: [countryId], references: [id])
+  stateId      String
+  State        State   @relation(fields: [stateId], references: [id])
 
   isVerified Boolean    @default(false)
   userType   UserRole
@@ -36,9 +35,10 @@ model User {
   developer  Developer?
   server     Server?
 
-  reviews         Review[]
-  quizSubmissions QuizSubmission[]
-  // Progress             Progress[]
+  reviews          Review[]
+  quizSubmissions  QuizSubmission[]
+  progresses       Progress[]
+  enrolledPrograms UserProgram[]
 }
 
 model Country {
@@ -126,15 +126,27 @@ model Experience {
   serverId    String?
 }
 
+model UserProgram {
+  id        String   @id @default(uuid())
+  joinedAt  DateTime @default(now())
+  payment   Payment?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  programId String
+  program   Program  @relation(fields: [programId], references: [id])
+
+  @@unique([userId, programId])
+}
+
 model Program {
-  id           String   @id @default(uuid())
-  thumbnail    String
-  description  String
-  title        String
-  price        Float
-  publishedFor UserRole
-  course       Course[]
-  // payment      Payment[]
+  id            String        @id @default(uuid())
+  thumbnail     String
+  description   String
+  title         String
+  price         Float
+  publishedFor  UserRole
+  courses       Course[]
+  enrolledUsers UserProgram[]
 }
 
 model Course {
@@ -146,9 +158,9 @@ model Course {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  module Module[]
-  review Review[]
-  // Progress Progress[]
+  modules    Module[]
+  reviews    Review[]
+  progresses Progress[]
 
   program   Program @relation(fields: [programId], references: [id])
   programId String
@@ -161,7 +173,7 @@ model Module {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  content Content[]
+  contents Content[]
 
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
@@ -176,10 +188,10 @@ model Content {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   quiz        QuizInstance?
-  // Progress    Progress?
 
-  moduleId String
-  module   Module @relation(fields: [moduleId], references: [id])
+  moduleId   String
+  module     Module     @relation(fields: [moduleId], references: [id])
+  progresses Progress[]
 }
 
 model Quiz {
@@ -223,19 +235,19 @@ model QuizSubmission {
   @@unique([quizInstanceId, userId]) // Ensures a user has only one submission per quiz instance
 }
 
-// model Progress {
-//   id         String @id @default(uuid())
-//   percentage Int    @default(0) // Progress percentage (0-100)
+model Progress {
+  id         String @id @default(uuid())
+  percentage Int    @default(0) // Progress percentage (0-100)
 
-//   userId    String
-//   user      User    @relation(fields: [userId], references: [id])
-//   courseId  String
-//   course    Course  @relation(fields: [courseId], references: [id])
-//   contentId String  @unique
-//   content   Content @relation(fields: [contentId], references: [id])
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id])
+  contentId String
+  content   Content @relation(fields: [contentId], references: [id])
 
-//   @@unique([userId, courseId])
-// }
+  @@unique([userId, courseId])
+}
 
 model Review {
   id      String @id @default(uuid())
@@ -248,6 +260,18 @@ model Review {
   courseId String
 
   @@unique([userId, courseId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  amount          Float
+  currency        String
+  status          PaymentStatus @default(PENDING)
+  stripeSessionId String        @unique
+  createdAt       DateTime      @default(now())
+
+  userProgramId String      @unique
+  userProgram   UserProgram @relation(fields: [userProgramId], references: [id])
 }
 
 enum UserRole {
@@ -270,6 +294,13 @@ enum ContentType {
   VIDEO
   DESCRIPTION
   QUIZ
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
 }
 
 enum SubmissionStatus {

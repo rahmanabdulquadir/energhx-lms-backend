@@ -56,4 +56,17 @@ export class ContentController {
       data: result,
     });
   }
+
+  // Delete Content
+  @Delete(':id')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  public async deleteContent(@Res() res: Response, @Param() param: IdDto) {
+    const result = await this.contentService.deleteContent(param.id);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Content and associated data daleted successfully',
+      data: result,
+    });
+  }
 }
