@@ -4,7 +4,7 @@ import { TUser } from 'src/interface/token.type';
 import { LibService } from 'src/lib/lib.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './user.dto';
-import { Developer } from '@prisma/client';
+import { Developer, User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from 'src/utils/sendMail';
@@ -21,7 +21,7 @@ export class UserService {
 
   // ------------------------------- Get Me -------------------------------
   public async getMe(user: TUser) {
-    let result: Developer | Server | null;
+    let result: Developer | Server | User | null;
     if (user.userType !== 'DEVELOPER' && user.userType !== 'SERVER') {
       throw new HttpException(
         'Invalid User role provided',
@@ -41,6 +41,10 @@ export class UserService {
         include: {
           user: true,
         },
+      });
+    } else if (user.userType == 'ADMIN') {
+      result = await this.prisma.user.findUniqueOrThrow({
+        where: { id: user.id, status: 'ACTIVE' },
       });
     } else result = null;
     return result;
