@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpException,
   Param,
   Post,
+  RawBodyRequest,
   Req,
   Res,
   UseGuards,
@@ -15,7 +17,7 @@ import { CreateCheckoutDto } from './payment.dto';
 import { Request, Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-@Controller('payment')
+@Controller('w/payment')
 export class PaymentController {
   constructor(
     private prisma: PrismaService,
@@ -25,39 +27,35 @@ export class PaymentController {
   @Post('checkout')
   @UseGuards(AuthGuard)
   async createCheckout(@Req() req: Request, @Body() body: CreateCheckoutDto) {
-    const { programId, amount } = body;
     const userId = req.user?.id;
+    const useremail = req.user?.email;
 
-    const program = await this.prisma.program.findFirst({
-      where: { id: programId },
-    });
-    if (!program) throw new HttpException('Program not found!', 404);
-    const title = program.title;
-
-    const successUrl = 'http://localhost:3000/payment/success';
-    const cancelUrl = 'http://localhost:3000/payment/cancel';
-
-    const checkoutSession = await this.stripeService.createCheckoutSession({
+    const checkoutSession = await this.stripeService.createCheckoutSession(
+      body,
       userId,
-      programId,
-      title,
-      amount,
-      successUrl,
-      cancelUrl,
-    });
+      useremail,
+    );
 
     return { checkoutSession };
   }
 
-  @Get('/success')
-  getSuccess(@Res() res: Response) {
-    return res.status(200).json({ message: 'Payment successful!!' });
+  @Post('webhook')
+  async webhook(
+    @Headers('stripe-signature') signature: string,
+    @Req() req: RawBodyRequest<Request>,
+  ) {
+    return this.stripeService.handleWebhook(req);
   }
 
-  @Get('/cancel')
-  getCancel(@Res() res: Response) {
-    return res.status(200).json({ message: 'Payment cancelled!' });
-  }
+  // @Get('/success')
+  // getSuccess(@Res() res: Response) {
+  //   return res.status(200).json({ message: 'Payment successful!!' });
+  // }
+
+  // @Get('/cancel')
+  // getCancel(@Res() res: Response) {
+  //   return res.status(200).json({ message: 'Payment cancelled!' });
+  // }
 
   @Get('details/:sessionId')
   async getPaymentDetails(@Param('sessionId') sessionId: string) {
