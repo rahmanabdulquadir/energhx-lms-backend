@@ -40,6 +40,18 @@ export class ModuleController {
     });
   }
 
+  // Get all Modules
+  @Get('/course-modules/:id')
+  async getAllModules(@Res() res: Response, @Param() param: IdDto) {
+    const result = await this.moduleService.getAllModules(param.id);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'All Modules retrieved successfully',
+      data: result,
+    });
+  }
+
   // Get single Module
   @Get(':id')
   @UseGuards(AuthGuard)

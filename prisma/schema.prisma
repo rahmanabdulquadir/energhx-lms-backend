@@ -139,12 +139,15 @@ model UserProgram {
 }
 
 model Program {
-  id            String        @id @default(uuid())
-  thumbnail     String
-  description   String
-  title         String
-  price         Float
-  publishedFor  UserRole
+  id           String   @id @default(uuid())
+  thumbnail    String
+  description  String
+  title        String
+  price        Float
+  publishedFor UserRole
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   courses       Course[]
   enrolledUsers UserProgram[]
 }

@@ -22,7 +22,11 @@ export class UserService {
   // ------------------------------- Get Me -------------------------------
   public async getMe(user: TUser) {
     let result: Developer | Server | User | null;
-    if (user.userType !== 'DEVELOPER' && user.userType !== 'SERVER') {
+    if (
+      user.userType !== 'DEVELOPER' &&
+      user.userType !== 'SERVER' &&
+      user.userType !== 'ADMIN'
+    ) {
       throw new HttpException(
         'Invalid User role provided',
         HttpStatus.BAD_REQUEST,

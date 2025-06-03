@@ -36,6 +36,16 @@ export class ModuleService {
     return result;
   }
 
+  //----------------------------------Get All Modules---------------------------------------
+  public async getAllModules(courseId: string) {
+    const result = await this.prisma.module.findMany({
+      where: { courseId },
+    });
+    if (!result)
+      throw new HttpException('No Module Found for this course!', 404);
+    return result;
+  }
+
   //---------------------------------------Update Module--------------------------------------------
   public async updateModule(id: string, data: UpdateModuleDto) {
     const module = await this.prisma.module.findUnique({
@@ -70,11 +80,11 @@ export class ModuleService {
           },
         },
       });
-  
+
       if (!module) throw new HttpException('Module not found', 404);
-  
+
       const courseId = module.course.id;
-  
+
       // Get all modules of the course
       const allModules = await tx.module.findMany({
         where: { courseId },
@@ -86,7 +96,7 @@ export class ModuleService {
           },
         },
       });
-  
+
       // Flatten content IDs in order
       const allContentIds: string[] = [];
       let previousContentId: string | null = null;
@@ -98,13 +108,13 @@ export class ModuleService {
           allContentIds.push(...moduleContents);
         }
       }
-  
+
       const contentIdsToDelete = new Set(module.contents.map((c) => c.id));
-  
+
       const progressRecords = await tx.progress.findMany({
         where: { courseId },
       });
-  
+
       for (const progress of progressRecords) {
         if (contentIdsToDelete.has(progress.contentId)) {
           if (previousContentId) {
@@ -119,7 +129,7 @@ export class ModuleService {
           }
         }
       }
-  
+
       for (const content of module.contents) {
         if (content.quiz) {
           await tx.quizSubmission.deleteMany({
@@ -132,19 +142,17 @@ export class ModuleService {
             where: { id: content.quiz.id },
           });
         }
-  
+
         await tx.content.delete({
           where: { id: content.id },
         });
       }
-  
+
       await tx.module.delete({
         where: { id },
       });
-  
+
       return null;
     });
   }
-  
-  
 }
