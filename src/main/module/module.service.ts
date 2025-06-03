@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateModuleDto, UpdateModuleDto } from './module.dto';
 import { TUser } from 'src/interface/token.type';
@@ -21,11 +21,44 @@ export class ModuleService {
   }
 
   // ------------------------------------Get Single Module-------------------------------------
-  public async getSingleModule(id: string) {
+  public async getSingleModule(id: string, user: TUser) {
     const module = await this.prisma.module.findUnique({
-      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
+      where: { id },
+      select: {
+        course: {
+          select: {
+            program: {
+              select: {
+                publishedFor: true,
+              },
+            },
+            programId: true,
+          },
+        },
+      },
     });
     if (!module) throw new HttpException('Module Not Found', 404);
+
+    if (user.userType !== 'ADMIN') {
+      if (module.course.program.publishedFor !== user.userType)
+        throw new HttpException(
+          'This course is not for you to view',
+          HttpStatus.BAD_REQUEST,
+        );
+      const paymentStatus = await this.prisma.userProgram.findUnique({
+        where: {
+          userId_programId: {
+            userId: user.id,
+            programId: module.course.programId,
+          },
+        },
+      });
+      if (!paymentStatus)
+        throw new HttpException(
+          'You need to pay first to view the course',
+          HttpStatus.BAD_REQUEST,
+        );
+    }
 
     const result = await this.prisma.module.findUnique({
       where: { id },

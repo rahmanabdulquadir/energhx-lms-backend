@@ -1,6 +1,7 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto } from './course.dto';
+import { TUser } from 'src/interface/token.type';
 
 @Injectable()
 export class CourseService {
@@ -20,11 +21,39 @@ export class CourseService {
   }
 
   // --------------------------------Get Single Course-----------------------------------
-  public async getSingleCourse(id: string) {
+  public async getSingleCourse(id: string, user: TUser) {
     const course = await this.prisma.course.findUnique({
-      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
+      where: { id },
+      select: {
+        program: {
+          select: {
+            publishedFor: true,
+          },
+        },
+        programId: true,
+      },
     });
     if (!course) throw new HttpException('Course Not Found', 404);
+    if (user.userType !== 'ADMIN') {
+      if (course.program.publishedFor !== user.userType)
+        throw new HttpException(
+          'This course is not for you to view',
+          HttpStatus.BAD_REQUEST,
+        );
+      const paymentStatus = await this.prisma.userProgram.findUnique({
+        where: {
+          userId_programId: {
+            userId: user.id,
+            programId: course.programId,
+          },
+        },
+      });
+      if (!paymentStatus)
+        throw new HttpException(
+          'You need to pay first to view the course',
+          HttpStatus.BAD_REQUEST,
+        );
+    }
 
     const result = await this.prisma.course.findUnique({
       where: { id },

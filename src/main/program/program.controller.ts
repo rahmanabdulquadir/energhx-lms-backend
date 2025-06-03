@@ -43,8 +43,15 @@ export class ProgramController {
   // Get single Program
   @Get(':id')
   @UseGuards(AuthGuard)
-  public async getSingleProgram(@Res() res: Response, @Param() param: IdDto) {
-    const result = await this.programService.getSingleProgram(param.id);
+  public async getSingleProgram(
+    @Res() res: Response,
+    @Param() param: IdDto,
+    @Req() req: Request,
+  ) {
+    const result = await this.programService.getSingleProgram(
+      param.id,
+      req.user,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

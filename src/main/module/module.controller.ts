@@ -16,7 +16,7 @@ import { UserRole } from '@prisma/client';
 import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { IdDto } from 'src/common/id.dto';
 import sendResponse from 'src/utils/sendResponse';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { CreateModuleDto, UpdateModuleDto } from './module.dto';
 import { ModuleService } from './module.service';
 
@@ -60,7 +60,7 @@ export class ModuleController {
     @Param() param: IdDto,
     @Req() req: Request,
   ) {
-    const result = await this.moduleService.getSingleModule(param.id);
+    const result = await this.moduleService.getSingleModule(param.id, req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

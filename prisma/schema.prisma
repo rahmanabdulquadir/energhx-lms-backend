@@ -127,13 +127,16 @@ model Experience {
 }
 
 model UserProgram {
-  id        String   @id @default(uuid())
-  joinedAt  DateTime @default(now())
-  payment   Payment?
+  joinedAt        DateTime      @default(now())
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentIntentId String?
+  paymentMethod   String?
+  invoiceUrl      String?
+
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
   programId String
-  program   Program  @relation(fields: [programId], references: [id])
+  program   Program @relation(fields: [programId], references: [id])
 
   @@unique([userId, programId])
 }
@@ -263,18 +266,6 @@ model Review {
   courseId String
 
   @@unique([userId, courseId])
-}
-
-model Payment {
-  id              String        @id @default(uuid())
-  amount          Float
-  currency        String
-  status          PaymentStatus @default(PENDING)
-  stripeSessionId String        @unique
-  createdAt       DateTime      @default(now())
-
-  userProgramId String      @unique
-  userProgram   UserProgram @relation(fields: [userProgramId], references: [id])
 }
 
 enum UserRole {

@@ -56,10 +56,23 @@ export class QuizService {
   public async startQuiz(id: string, user: TUser) {
     const quizContent = await this.prisma.content.findUnique({
       where: { id },
-      include: {
-        module: true,
+      select: {
+        module: {
+          select: {
+            course: {
+              select: {
+                program: {
+                  select: {
+                    publishedFor: true,
+                  },
+                },
+                programId: true,
+              },
+            },
+          },
+        },
         quiz: {
-          include: {
+          select: {
             quizzes: {
               select: {
                 id: true,
@@ -71,9 +84,28 @@ export class QuizService {
         },
       },
     });
-    if (!quizContent?.quiz?.quizzes || !quizContent?.quiz.quizzes.length) {
+
+    if (!quizContent?.quiz?.quizzes || !quizContent?.quiz.quizzes.length)
       throw new HttpException('No quizzes found!', HttpStatus.NOT_FOUND);
-    }
+    if (quizContent?.module.course.program.publishedFor !== user.userType)
+      throw new HttpException(
+        'This quiz is not for you to view',
+        HttpStatus.BAD_REQUEST,
+      );
+    const paymentStatus = await this.prisma.userProgram.findUnique({
+      where: {
+        userId_programId: {
+          userId: user.id,
+          programId: quizContent?.module.course?.programId,
+        },
+      },
+    });
+    if (!paymentStatus)
+      throw new HttpException(
+        'You need to pay first to view the quiz',
+        HttpStatus.BAD_REQUEST,
+      );
+
     const existingUser = await this.prisma.user.findUnique({
       where: { id: user.id, status: 'ACTIVE' }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
     });
@@ -93,17 +125,18 @@ export class QuizService {
     // Check if the content exists
     const content = await this.prisma.content.findUnique({
       where: { id: contentId },
-      include: {
+      select: {
         quiz: true,
         module: {
-          include: {
+          select: {
             course: {
-              include: {
+              select: {
                 program: {
                   select: {
                     publishedFor: true,
                   },
                 },
+                programId: true,
               },
             },
           },
@@ -113,8 +146,23 @@ export class QuizService {
     if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
     if (content.module.course.program.publishedFor !== user.userType)
-      throw new HttpException('Invalid Request', HttpStatus.BAD_REQUEST);
-
+      throw new HttpException(
+        'This quiz is not for you to submit!',
+        HttpStatus.BAD_REQUEST,
+      );
+    const paymentStatus = await this.prisma.userProgram.findUnique({
+      where: {
+        userId_programId: {
+          userId: user.id,
+          programId: content?.module.course?.programId,
+        },
+      },
+    });
+    if (!paymentStatus)
+      throw new HttpException(
+        'You need to pay first to view the quiz',
+        HttpStatus.BAD_REQUEST,
+      );
     // Check if the student is enrolled in the course
     const subscribedUser = await this.prisma.user.findUnique({
       where: { id: user.id, status: 'ACTIVE' }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE

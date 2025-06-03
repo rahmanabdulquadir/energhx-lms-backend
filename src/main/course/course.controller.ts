@@ -18,7 +18,7 @@ import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import { IdDto } from 'src/common/id.dto';
 import sendResponse from 'src/utils/sendResponse';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 @Controller('course')
 export class CourseController {
@@ -48,7 +48,7 @@ export class CourseController {
     @Param() param: IdDto,
     @Req() req: Request,
   ) {
-    const result = await this.courseService.getSingleCourse(param.id);
+    const result = await this.courseService.getSingleCourse(param.id, req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

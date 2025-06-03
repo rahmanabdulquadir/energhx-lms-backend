@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { IdDto } from 'src/common/id.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProgramDto, UpdateProgramDto } from './program.dto';
+import { TUser } from 'src/interface/token.type';
 
 @Injectable()
 export class ProgramService {
@@ -15,14 +16,34 @@ export class ProgramService {
   }
 
   // --------------------------------Get Single Program---------------------------------
-  public async getSingleProgram(id: string) {
+  public async getSingleProgram(id: string, user: TUser) {
     const program = await this.prisma.program.findUnique({
       where: { id },
     });
     if (!program) throw new HttpException('Program Not Found', 404);
+    if (user.userType !== 'ADMIN') {
+      if (program.publishedFor !== user.userType)
+        throw new HttpException(
+          'This program is not for you to view',
+          HttpStatus.BAD_REQUEST,
+        );
+      const paymentStatus = await this.prisma.userProgram.findUnique({
+        where: {
+          userId_programId: {
+            userId: user.id,
+            programId: program.id,
+          },
+        },
+      });
+      if (!paymentStatus)
+        throw new HttpException(
+          'You need to pay first to view the program',
+          HttpStatus.BAD_REQUEST,
+        );
+    }
 
     const result = await this.prisma.program.findUnique({
-      where: { id }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
+      where: { id },
       include: {
         courses: true,
       },

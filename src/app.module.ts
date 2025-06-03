@@ -19,6 +19,9 @@ import { ContentModule } from './main/content/content.module';
 import { QuizModule } from './main/quiz/quiz.module';
 import { PaymentModule } from './main/payment/payment.module';
 import { ReviewModule } from './main/review/review.module';
+import { StripeModule } from './main/stripe/stripe.module';
+import { StripeService } from './main/stripe/stripe.service';
+import { StripeController } from './main/stripe/stripe.controller';
 
 @Module({
   imports: [
@@ -41,8 +44,9 @@ import { ReviewModule } from './main/review/review.module';
     QuizModule,
     PaymentModule,
     ReviewModule,
+    StripeModule,
   ],
-  controllers: [AppController, UserController],
-  providers: [AppService, UserService, MailerService],
+  controllers: [AppController, UserController, StripeController],
+  providers: [AppService, UserService, MailerService, StripeService],
 })
 export class AppModule {}
