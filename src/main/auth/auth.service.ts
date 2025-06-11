@@ -63,7 +63,7 @@ export class AuthService {
       userData.password as string,
     );
     if (!isCorrectPassword) {
-      throw new Error('Password is incorrect');
+      throw new HttpException('Password is incorrect', HttpStatus.BAD_REQUEST);
     }
 
     const hashedPassword: string = await bcrypt.hash(payload.newPassword, 12);

@@ -34,6 +34,7 @@ model User {
   updatedAt  DateTime   @updatedAt
   developer  Developer?
   server     Server?
+  Admin      Admin?
 
   reviews          Review[]
   quizSubmissions  QuizSubmission[]
@@ -87,6 +88,16 @@ model Server {
   userId String @unique
 }
 
+model Admin {
+  id        String                @id @default(uuid())
+  email     String                @unique
+  status    Status                @default(ACTIVE)
+  canAccess RolesToAccessForAdmin
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+}
+
 model Publication {
   id              String @id @default(uuid())
   publisher       String
@@ -127,11 +138,12 @@ model Experience {
 }
 
 model UserProgram {
-  joinedAt        DateTime      @default(now())
-  paymentStatus   PaymentStatus @default(PENDING)
+  joinedAt        DateTime          @default(now())
+  paymentStatus   PaymentStatus     @default(PENDING)
   paymentIntentId String?
   paymentMethod   String?
   invoiceUrl      String?
+  status          UserProgramStatus @default(BASIC)
 
   userId    String
   user      User    @relation(fields: [userId], references: [id])
@@ -272,6 +284,12 @@ enum UserRole {
   SERVER
   DEVELOPER
   ADMIN
+  SUPER_ADMIN
+}
+
+enum RolesToAccessForAdmin {
+  DEVELOPER
+  SERVER
 }
 
 enum Status {
@@ -282,6 +300,12 @@ enum Status {
 enum Gender {
   MALE
   FEMALE
+}
+
+enum UserProgramStatus {
+  BASIC
+  STANDARD
+  CERTIFIED
 }
 
 enum ContentType {

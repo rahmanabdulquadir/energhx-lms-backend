@@ -3,12 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -19,19 +21,53 @@ import { CreateProgramDto, UpdateProgramDto } from './program.dto';
 import { ProgramService } from './program.service';
 import { Request, Response } from 'express';
 import sendResponse from 'src/utils/sendResponse';
+import { UploadInterceptor } from 'src/common/upload.interceptor';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { LibService } from 'src/lib/lib.service';
 
 @Controller('program')
 export class ProgramController {
-  constructor(private readonly programService: ProgramService) {}
+  constructor(
+    private readonly programService: ProgramService,
+    private readonly lib: LibService,
+  ) {}
 
   // Create Program
   @Post()
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async createProgram(
     @Res() res: Response,
-    @Body() data: CreateProgramDto,
+    @Body('text') text: string, // this is the JSON string from "text"
+    @UploadedFile() file: any,
   ) {
-    const result = await this.programService.createProgram(data);
+    const parsed = JSON.parse(text);
+    const createProgramDto = plainToInstance(CreateProgramDto, parsed);
+
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        createProgramDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    const errors = await validate(createProgramDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+    const result = await this.programService.createProgram(createProgramDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -74,13 +110,42 @@ export class ProgramController {
 
   // Update Program
   @Patch(':id')
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async updateProgram(
     @Res() res: Response,
     @Param() param: IdDto,
-    @Body() data: UpdateProgramDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.programService.updateProgram(param.id, data);
+    let updateProgramDto: any = {};
+    if (!text && !file) {
+      throw new HttpException(
+        'No data provided for update',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (text) {
+      const parsed = JSON.parse(text);
+      updateProgramDto = plainToInstance(UpdateProgramDto, parsed);
+    }
+
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        updateProgramDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    await validate(updateProgramDto);
+    console.log('updateProgramDto ==> ', updateProgramDto);
+
+    const result = await this.programService.updateProgram(
+      param.id,
+      updateProgramDto,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

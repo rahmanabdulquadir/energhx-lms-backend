@@ -12,11 +12,13 @@ import {
   ValidationPipe,
   UploadedFile,
   Param,
+  Patch,
+  HttpException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { Request, Response } from 'express';
-import { CreatePasswordDto, CreateUserDto } from './user.dto';
+import { CreatePasswordDto, CreateUserDto, UpdateUserDto } from './user.dto';
 import sendResponse from 'src/utils/sendResponse';
 import { UploadInterceptor } from 'src/common/upload.interceptor';
 import { LibService } from 'src/lib/lib.service';
@@ -24,6 +26,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { UserRole } from '@prisma/client';
+import { IdDto } from 'src/common/id.dto';
 
 @Controller('user')
 export class UserController {
@@ -65,23 +68,9 @@ export class UserController {
     @UploadedFile() file: any,
     @Res() res: Response,
   ) {
-    let createUserDto: any;
     // Parse text and transform to DTO instance
     const parsed = JSON.parse(text);
-    createUserDto = plainToInstance(CreateUserDto, parsed);
-
-    // Validate the parsed DTO manually
-    const errors = await validate(createUserDto);
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.map((err) => ({
-          property: err.property,
-          constraints: err.constraints,
-        })),
-      });
-    }
+    const createUserDto = plainToInstance(CreateUserDto, parsed);
 
     // If file is uploaded, attach URL
     if (file) {
@@ -94,11 +83,77 @@ export class UserController {
       }
     }
 
+    // Validate the parsed DTO manually
+    const errors = await validate(createUserDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
     const result = await this.userService.registerUser(createUserDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
       message: 'Please check your email to verify your account!',
+      data: result,
+    });
+  }
+
+  // Update Me
+  @Patch('update/me')
+  @UploadInterceptor('file')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  public async updateMe(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
+  ) {
+    let rawData: any = {};
+
+    if (!text && !file) {
+      throw new HttpException(
+        'No data provided for update',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (text) rawData = JSON.parse(text);
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        rawData.profile_photo = uploaded.secure_url;
+      }
+    }
+    const updateMeDto = plainToInstance(UpdateUserDto, rawData);
+    const errors = await validate(updateMeDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+
+    const result = await this.userService.updateMe(req.user.id, updateMeDto);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Profile updated successfully',
       data: result,
     });
   }
@@ -118,7 +173,6 @@ export class UserController {
     });
   }
 
-  //
   @Post('progress/:courseId/:contentId')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
   async setProgress(@Param() param, @Req() req: Request, @Res() res: Response) {

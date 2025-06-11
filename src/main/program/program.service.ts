@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { IdDto } from 'src/common/id.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProgramDto, UpdateProgramDto } from './program.dto';
 import { TUser } from 'src/interface/token.type';
@@ -10,7 +9,13 @@ export class ProgramService {
   // ------------------------------Create Program-------------------------------------
   public async createProgram(data: CreateProgramDto) {
     const result = await this.prisma.program.create({
-      data,
+      data: {
+        title: data.title,
+        description: data.description,
+        thumbnail: data.thumbnail,
+        price: data.price,
+        publishedFor: data.publishedFor,
+      },
     });
     return result;
   }

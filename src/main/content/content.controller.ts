@@ -3,12 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/guard/auth.guard';
@@ -19,19 +21,66 @@ import { IdDto } from 'src/common/id.dto';
 import sendResponse from 'src/utils/sendResponse';
 import { Response } from 'express';
 import { ContentService } from './content.service';
+import { UploadInterceptor } from 'src/common/upload.interceptor';
+import { plainToInstance } from 'class-transformer';
+import { LibService } from 'src/lib/lib.service';
+import { validate } from 'class-validator';
 
 @Controller('content')
 export class ContentController {
-  constructor(private contentService: ContentService) {}
+  constructor(
+    private contentService: ContentService,
+    private readonly lib: LibService,
+  ) {}
 
   // Create Content
   @Post()
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async createContent(
     @Res() res: Response,
-    @Body() data: CreateContentDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.contentService.createContent(data);
+    const parsed = JSON.parse(text);
+    const createContentDto = plainToInstance(CreateContentDto, parsed);
+    if (
+      createContentDto.contentType == 'DESCRIPTION' &&
+      !createContentDto.description
+    ) {
+      throw new HttpException(
+        'Description is required for DESCRIPTION content type',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (createContentDto.contentType == 'VIDEO') {
+      if (!file)
+        throw new HttpException(
+          'Video file is required',
+          HttpStatus.BAD_REQUEST,
+        );
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        createContentDto.video = uploaded.secure_url;
+      }
+    }
+    const errors = await validate(createContentDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+    const result = await this.contentService.createContent(createContentDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

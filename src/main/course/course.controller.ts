@@ -3,12 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { CourseService } from './course.service';
@@ -19,19 +21,41 @@ import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import { IdDto } from 'src/common/id.dto';
 import sendResponse from 'src/utils/sendResponse';
 import { Request, Response } from 'express';
+import { UploadInterceptor } from 'src/common/upload.interceptor';
+import { plainToInstance } from 'class-transformer';
+import { LibService } from 'src/lib/lib.service';
+import { validate } from 'class-validator';
 
 @Controller('course')
 export class CourseController {
-  constructor(private courseService: CourseService) {}
+  constructor(
+    private courseService: CourseService,
+    private readonly lib: LibService,
+  ) {}
 
   // Create Course
   @Post()
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async createCourse(
     @Res() res: Response,
-    @Body() data: CreateCourseDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.courseService.createCourse(data);
+    const parsed = JSON.parse(text);
+    const createCourseDto = plainToInstance(CreateCourseDto, parsed);
+
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        createCourseDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    await validate(createCourseDto);
+    const result = await this.courseService.createCourse(createCourseDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -71,13 +95,51 @@ export class CourseController {
 
   // Update Course
   @Patch(':id')
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async updateCourse(
     @Res() res: Response,
     @Param() param: IdDto,
-    @Body() data: UpdateCourseDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.courseService.updateCourse(param.id, data);
+    let updateCourseDto: any = {};
+    if (!text && !file) {
+      throw new HttpException(
+        'No data provided for update',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (text) {
+      const parsed = JSON.parse(text);
+      updateCourseDto = plainToInstance(UpdateCourseDto, parsed);
+    }
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        updateCourseDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    const errors = await validate(updateCourseDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+    const result = await this.courseService.updateCourse(
+      param.id,
+      updateCourseDto,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

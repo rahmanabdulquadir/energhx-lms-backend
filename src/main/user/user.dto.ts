@@ -7,7 +7,7 @@ import {
   IsInt,
   IsEnum,
 } from 'class-validator';
-import { Gender, UserRole } from '@prisma/client';
+import { Gender, RolesToAccessForAdmin, UserRole } from '@prisma/client';
 
 export class CreateUserDto {
   @IsEmail()
@@ -35,7 +35,7 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  profile_photo?: string;
+  profile_photo: string;
 
   @IsInt()
   streetNumber: number;
@@ -57,6 +57,63 @@ export class CreateUserDto {
 
   @IsEnum(UserRole)
   userType: UserRole;
+
+  @IsOptional()
+  @IsEnum(RolesToAccessForAdmin)
+  canAccess: RolesToAccessForAdmin;
+}
+
+export class UpdateUserDto {
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  firstName: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  lastName: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  otherName?: string;
+
+  @IsOptional()
+  @IsEnum(Gender)
+  sex: Gender;
+
+  @IsOptional()
+  @IsString()
+  companyName: string;
+
+  @IsOptional()
+  @IsString()
+  profile_photo: string;
+
+  @IsOptional()
+  @IsInt()
+  streetNumber: number;
+
+  @IsOptional()
+  @IsString()
+  street: string;
+
+  @IsOptional()
+  @IsInt()
+  postalCode: number;
+
+  @IsOptional()
+  @IsString()
+  city: string;
+
+  @IsOptional()
+  @IsString()
+  countryId: string;
+
+  @IsOptional()
+  @IsString()
+  stateId: string;
 }
 
 export class CreatePasswordDto {

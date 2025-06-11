@@ -1,8 +1,8 @@
 import {
   BadRequestException,
   HttpException,
+  HttpStatus,
   Injectable,
-  NotFoundException,
   RawBodyRequest,
 } from '@nestjs/common';
 import Stripe from 'stripe';
@@ -20,8 +20,9 @@ export class StripeService {
   ) {
     const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
-      throw new Error(
+      throw new HttpException(
         'STRIPE_SECRET_KEY is not defined in the environment variables',
+        HttpStatus.BAD_REQUEST,
       );
     }
     console.log(stripeSecretKey);
@@ -35,7 +36,6 @@ export class StripeService {
       where: { id: programId },
     });
     if (!program) throw new HttpException('Program not found!', 404);
-    const title = program.title;
 
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -96,8 +96,8 @@ export class StripeService {
       await this.prisma.userProgram.create({
         data: {
           paymentIntentId: data.id,
-          user: { connect: { id: metadata.userId } },
-          program: { connect: { id: metadata.programId } },
+          userId: metadata.userId,
+          programId: metadata.programId,
         },
       });
     }
@@ -150,7 +150,7 @@ export class StripeService {
     const session = await this.stripe.checkout.sessions.retrieve(sessionId);
 
     if (!session) {
-      throw new Error('Checkout session not found');
+      throw new HttpException('Checkout session not found', 404);
     }
 
     const paymentIntent = session.payment_intent

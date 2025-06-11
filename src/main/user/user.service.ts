@@ -47,8 +47,11 @@ export class UserService {
         },
       });
     } else if (user.userType == 'ADMIN') {
-      result = await this.prisma.user.findUniqueOrThrow({
-        where: { id: user.id, status: 'ACTIVE' },
+      result = await this.prisma.admin.findUniqueOrThrow({
+        where: { userId: user.id, status: 'ACTIVE' },
+        include: {
+          user: true,
+        },
       });
     } else result = null;
     return result;
@@ -57,12 +60,16 @@ export class UserService {
   // ------------------------------- Get All Users -------------------------------
   public async getAllUsers() {
     const result = await this.prisma.user.findMany();
-    console.log(result);
     return result;
   }
 
   // --------------------------------------- Create User ----------------------------------
   public async registerUser(dto: CreateUserDto) {
+    if (dto.userType === 'SUPER_ADMIN')
+      throw new HttpException(
+        'Cannot Create Super Admin!',
+        HttpStatus.UNAUTHORIZED,
+      );
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -99,43 +106,57 @@ export class UserService {
 
     if (state.countryId !== dto.countryId) {
       throw new HttpException(
-        'stateId does not belong to the provided countryId',
+        'StateId does not belong to the provided countryId',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const createdUser = await this.prisma.user.create({
-      data: {
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        sex: dto.sex,
-        companyName: dto.companyName,
-        otherName: dto.otherName,
-        email: dto.email,
-        profile_photo: dto.profile_photo,
-        streetNumber: dto.streetNumber,
-        street: dto.street,
-        postalCode: dto.postalCode,
-        city: dto.city,
-        countryId: dto.countryId,
-        stateId: dto.stateId,
-        userType: dto.userType,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          sex: dto.sex,
+          companyName: dto.companyName,
+          otherName: dto.otherName,
+          email: dto.email,
+          profile_photo: dto.profile_photo,
+          streetNumber: dto.streetNumber,
+          street: dto.street,
+          postalCode: dto.postalCode,
+          city: dto.city,
+          countryId: dto.countryId,
+          stateId: dto.stateId,
+          userType: dto.userType,
+        },
+      });
+
+      if (dto.userType === 'DEVELOPER') {
+        await tx.developer.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+          },
+        });
+      } else if (dto.userType === 'SERVER') {
+        await tx.server.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+          },
+        });
+      } else if (dto.userType === 'ADMIN') {
+        await tx.admin.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+            canAccess: dto.canAccess,
+          },
+        });
+      }
+
+      return user;
     });
-    if (dto.userType == 'DEVELOPER')
-      await this.prisma.developer.create({
-        data: {
-          userId: createdUser.id,
-          email: createdUser.email,
-        },
-      });
-    else if (dto.userType == 'SERVER')
-      await this.prisma.server.create({
-        data: {
-          userId: createdUser.id,
-          email: createdUser.email,
-        },
-      });
 
     const verificationLink = `${this.configService.get(
       'VERIFY_EMAIL_LINK',
@@ -153,6 +174,19 @@ export class UserService {
     );
 
     return null;
+  }
+
+  // ------------------------------- Update User -------------------------------
+  public async updateMe(id: string, data: Partial<CreateUserDto>) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    const result = await this.prisma.user.update({
+      where: { id },
+      data,
+    });
+    return result;
   }
 
   // ------------------------------- Create Password -------------------------------

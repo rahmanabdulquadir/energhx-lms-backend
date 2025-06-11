@@ -3,12 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from 'src/guard/auth.guard';
@@ -19,19 +21,53 @@ import sendResponse from 'src/utils/sendResponse';
 import { Request, Response } from 'express';
 import { CreateModuleDto, UpdateModuleDto } from './module.dto';
 import { ModuleService } from './module.service';
+import { UploadInterceptor } from 'src/common/upload.interceptor';
+import { plainToInstance } from 'class-transformer';
+import { LibService } from 'src/lib/lib.service';
+import { validate } from 'class-validator';
 
 @Controller('module')
 export class ModuleController {
-  constructor(private moduleService: ModuleService) {}
+  constructor(
+    private moduleService: ModuleService,
+    private readonly lib: LibService,
+  ) {}
 
   // Create Module
   @Post()
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async createModule(
     @Res() res: Response,
-    @Body() data: CreateModuleDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.moduleService.createModule(data);
+    const parsed = JSON.parse(text);
+    const createModuleDto = plainToInstance(CreateModuleDto, parsed);
+
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        createModuleDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    const errors = await validate(createModuleDto);
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+    const result = await this.moduleService.createModule(createModuleDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -71,13 +107,36 @@ export class ModuleController {
 
   // Update Module
   @Patch(':id')
+  @UploadInterceptor('file')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
   public async updateModule(
     @Res() res: Response,
     @Param() param: IdDto,
-    @Body() data: UpdateModuleDto,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
   ) {
-    const result = await this.moduleService.updateModule(param.id, data);
+    let updateModuleDto: any = {};
+    if (!text && !file) {
+      throw new HttpException(
+        'No data provided for update',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (text) {
+      const parsed = JSON.parse(text);
+      updateModuleDto = plainToInstance(UpdateModuleDto, parsed);
+    }
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        updateModuleDto.thumbnail = uploaded.secure_url;
+      }
+    }
+    await validate(updateModuleDto);
+    const result = await this.moduleService.updateModule(param.id, updateModuleDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
