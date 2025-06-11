@@ -49,7 +49,7 @@ export class UserController {
   }
 
   @Get('/')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllUsers(@Res() res: Response) {
     const result = await this.userService.getAllUsers();
     sendResponse(res, {
@@ -109,7 +109,7 @@ export class UserController {
   // Update Me
   @Patch('update/me')
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard)
   public async updateMe(
     @Req() req: Request,
     @Res() res: Response,

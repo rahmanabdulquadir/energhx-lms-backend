@@ -87,7 +87,7 @@ export class DeveloperController {
   }
 
   @Get('/:id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getSingleDeveloper(@Req() req: Request, @Res() res: Response) {
     const result = await this.developerService.getASingleDeveloper(
       req.params.id,
@@ -100,7 +100,7 @@ export class DeveloperController {
     });
   }
   @Get()
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllDevelopers(@Req() req: Request, @Res() res: Response) {
     const result = await this.developerService.getAllDevelopersFromDB();
     sendResponse(res, {

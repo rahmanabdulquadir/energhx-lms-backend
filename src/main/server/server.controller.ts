@@ -92,7 +92,7 @@ export class ServerController {
   }
 
   @Get('/:id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getSingleServer(@Req() req: Request, @Res() res: Response) {
     const result = await this.serverService.getASingleServer(req.params.id);
     sendResponse(res, {
@@ -104,7 +104,7 @@ export class ServerController {
   }
 
   @Get()
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllServers(@Req() req: Request, @Res() res: Response) {
     const result = await this.serverService.getAllServersFromDB();
     sendResponse(res, {

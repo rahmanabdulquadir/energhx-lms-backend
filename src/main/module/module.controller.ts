@@ -36,8 +36,9 @@ export class ModuleController {
   // Create Module
   @Post()
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   public async createModule(
+    @Req() req: Request,
     @Res() res: Response,
     @Body('text') text: string,
     @UploadedFile() file: any,
@@ -67,7 +68,10 @@ export class ModuleController {
         })),
       });
     }
-    const result = await this.moduleService.createModule(createModuleDto);
+    const result = await this.moduleService.createModule(
+      createModuleDto,
+      req.user,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -108,8 +112,9 @@ export class ModuleController {
   // Update Module
   @Patch(':id')
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   public async updateModule(
+    @Req() req: Request,
     @Res() res: Response,
     @Param() param: IdDto,
     @Body('text') text: string,
@@ -136,7 +141,11 @@ export class ModuleController {
       }
     }
     await validate(updateModuleDto);
-    const result = await this.moduleService.updateModule(param.id, updateModuleDto);
+    const result = await this.moduleService.updateModule(
+      param.id,
+      updateModuleDto,
+      req.user,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -147,7 +156,7 @@ export class ModuleController {
 
   // Delete Module
   @Delete(':id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   public async deleteModule(@Res() res: Response, @Param() param: IdDto) {
     const result = await this.moduleService.deleteModule(param.id);
     sendResponse(res, {

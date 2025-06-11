@@ -36,8 +36,9 @@ export class CourseController {
   // Create Course
   @Post()
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   public async createCourse(
+    @Req() req: Request,
     @Res() res: Response,
     @Body('text') text: string,
     @UploadedFile() file: any,
@@ -55,7 +56,10 @@ export class CourseController {
       }
     }
     await validate(createCourseDto);
-    const result = await this.courseService.createCourse(createCourseDto);
+    const result = await this.courseService.createCourse(
+      createCourseDto,
+      req.user,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -96,8 +100,9 @@ export class CourseController {
   // Update Course
   @Patch(':id')
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   public async updateCourse(
+    @Req() req: Request,
     @Res() res: Response,
     @Param() param: IdDto,
     @Body('text') text: string,
@@ -139,6 +144,7 @@ export class CourseController {
     const result = await this.courseService.updateCourse(
       param.id,
       updateCourseDto,
+      req.user
     );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
@@ -150,7 +156,7 @@ export class CourseController {
 
   // Delete Course
   @Delete(':id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   public async deleteCourse(@Res() res: Response, @Param() param: IdDto) {
     const result = await this.courseService.deleteCourse(param.id);
     sendResponse(res, {

@@ -2,18 +2,28 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateModuleDto, UpdateModuleDto } from './module.dto';
 import { TUser } from 'src/interface/token.type';
+import adminAccessControl from 'src/utils/adminAccessControl';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class ModuleService {
   constructor(private prisma: PrismaService) {}
 
   // ------------------------------Create Module-------------------------------------
-  public async createModule(data: CreateModuleDto) {
+  public async createModule(data: CreateModuleDto, user: TUser) {
     const course = await this.prisma.course.findUnique({
       where: { id: data.courseId },
+      select: {
+        program: {
+          select: {
+            publishedFor: true,
+          },
+        },
+      },
     });
     if (!course) throw new HttpException('Course Not Found', 404);
-
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(this.prisma, user, course.program.publishedFor);
     const Module = await this.prisma.module.create({
       data,
     });
@@ -80,12 +90,28 @@ export class ModuleService {
   }
 
   //---------------------------------------Update Module--------------------------------------------
-  public async updateModule(id: string, data: UpdateModuleDto) {
+  public async updateModule(id: string, data: UpdateModuleDto, user: TUser) {
     const module = await this.prisma.module.findUnique({
       where: { id },
+      select: {
+        course: {
+          select: {
+            program: {
+              select: {
+                publishedFor: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!module) throw new HttpException('Module Not Found', 404);
-
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(
+        this.prisma,
+        user,
+        module.course.program.publishedFor,
+      );
     const updated = await this.prisma.module.update({
       where: { id },
       data,

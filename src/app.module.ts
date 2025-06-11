@@ -21,6 +21,8 @@ import { PaymentModule } from './main/payment/payment.module';
 import { ReviewModule } from './main/review/review.module';
 import { StripeModule } from './main/stripe/stripe.module';
 import { StripeService } from './main/stripe/stripe.service';
+import { UserSeeder } from './seed/admin.seed';
+import { AdminModule } from './main/admin/admin.module';
 
 @Module({
   imports: [
@@ -44,8 +46,15 @@ import { StripeService } from './main/stripe/stripe.service';
     PaymentModule,
     ReviewModule,
     StripeModule,
+    AdminModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService, UserService, MailerService, StripeService],
+  providers: [
+    AppService,
+    UserService,
+    MailerService,
+    StripeService,
+    UserSeeder,
+  ],
 })
 export class AppModule {}

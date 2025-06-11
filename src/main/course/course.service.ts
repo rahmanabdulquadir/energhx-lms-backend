@@ -2,18 +2,24 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import { TUser } from 'src/interface/token.type';
+import adminAccessControl from 'src/utils/adminAccessControl';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class CourseService {
   constructor(private prisma: PrismaService) {}
 
   // ------------------------------Create Course-------------------------------------
-  public async createCourse(data: CreateCourseDto) {
+  public async createCourse(data: CreateCourseDto, user: TUser) {
     const program = await this.prisma.program.findUnique({
       where: { id: data.programId },
+      select: {
+        publishedFor: true,
+      },
     });
     if (!program) throw new HttpException('Program Not Found', 404);
-
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(this.prisma, user, program.publishedFor);
     const course = await this.prisma.course.create({
       data,
     });
@@ -71,11 +77,20 @@ export class CourseService {
   }
 
   //------------------------------------Update Course---------------------------------------
-  public async updateCourse(id: string, data: UpdateCourseDto) {
+  public async updateCourse(id: string, data: UpdateCourseDto, user:TUser) {
     const course = await this.prisma.course.findUnique({
       where: { id },
+      select: {
+        program: {
+          select: {
+            publishedFor: true,
+          },
+        },
+      }
     });
     if (!course) throw new HttpException('Course Not Found', 404);
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(this.prisma, user, course.program.publishedFor);
 
     const updated = await this.prisma.course.update({
       where: { id },

@@ -2,16 +2,20 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateQuizDto, SubmitAnswerDto } from './quiz.dto';
 import { IdDto } from 'src/common/id.dto';
 import { ApiResponse } from 'src/utils/sendResponse';
-import { Quiz, QuizSubmission } from '@prisma/client';
+import { Quiz, QuizSubmission, UserRole } from '@prisma/client';
 import { TUser } from 'src/interface/token.type';
 import { PrismaService } from 'src/prisma/prisma.service';
+import adminAccessControl from 'src/utils/adminAccessControl';
 
 @Injectable()
 export class QuizService {
   constructor(private readonly prisma: PrismaService) {}
 
   //------------------------------Get Quiz instance or Create------------------------------
-  private async getQuizInstanceOrCreate(contentId: string, totalMark: number) {
+  public async createQuiz(
+    { contentId, quizzesData }: CreateQuizDto,
+    user: TUser,
+  ) {
     let content = await this.prisma.content.findUnique({
       where: { id: contentId },
     });
@@ -19,36 +23,56 @@ export class QuizService {
     if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
 
-    let quizInstance = await this.prisma.quizInstance.findUnique({
+    let quizInstance: any;
+    quizInstance = await this.prisma.quizInstance.findUnique({
       where: { contentId },
+      select: {
+        content: {
+          select: {
+            module: {
+              select: {
+                course: {
+                  select: {
+                    program: {
+                      select: {
+                        publishedFor: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
+    if (quizInstance && user.userType === UserRole.ADMIN)
+      await adminAccessControl(
+        this.prisma,
+        user,
+        quizInstance.content.module.course.program.publishedFor,
+      );
 
     if (!quizInstance) {
       quizInstance = await this.prisma.quizInstance.create({
         data: {
           contentId,
-          totalMark,
+          totalMark: quizzesData.length,
         },
       });
     }
-    return quizInstance;
-  }
 
-  // ------------------------------Create A Quiz----------------------------------------
-  public async createQuiz({ contentId, quizzesData }: CreateQuizDto) {
-    const quizInstance = await this.getQuizInstanceOrCreate(
-      contentId,
-      quizzesData.length,
-    );
     const formattedData = quizzesData.map((quiz) => ({
       question: quiz.question,
       options: quiz.options,
       correctAnswer: quiz.correctAnswer,
       quizInstanceId: quizInstance.id,
     }));
-    const result = await this.prisma.quiz.createMany({
+
+    await this.prisma.quiz.createMany({
       data: formattedData,
     });
+
     return quizInstance;
   }
 
@@ -223,11 +247,40 @@ export class QuizService {
   }
 
   // ------------------------------Delete Single Quiz-------------------------------------
-  public async deleteQuiz(id: string) {
+  public async deleteQuiz(id: string, user: TUser) {
     const quiz = await this.prisma.quiz.findUnique({
       where: { id },
+      select: {
+        quizInstance: {
+          select: {
+            content: {
+              select: {
+                module: {
+                  select: {
+                    course: {
+                      select: {
+                        program: {
+                          select: {
+                            publishedFor: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
     if (!quiz) throw new HttpException('Quiz not found', HttpStatus.NOT_FOUND);
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(
+        this.prisma,
+        user,
+        quiz.quizInstance.content.module.course.program.publishedFor,
+      );
     await this.prisma.quiz.delete({
       where: { id },
     });

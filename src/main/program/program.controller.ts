@@ -36,7 +36,7 @@ export class ProgramController {
   // Create Program
   @Post()
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   public async createProgram(
     @Res() res: Response,
     @Body('text') text: string, // this is the JSON string from "text"
@@ -111,7 +111,7 @@ export class ProgramController {
   // Update Program
   @Patch(':id')
   @UploadInterceptor('file')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   public async updateProgram(
     @Res() res: Response,
     @Param() param: IdDto,
@@ -156,7 +156,7 @@ export class ProgramController {
 
   // Delete Program
   @Delete(':id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   public async deleteProgram(@Res() res: Response, @Param() param: IdDto) {
     const result = await this.programService.deleteProgram(param.id);
     sendResponse(res, {

@@ -24,13 +24,13 @@ export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @Post()
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   async createQuiz(
     @Body() createQuizDto: CreateQuizDto,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const result = await this.quizService.createQuiz(createQuizDto);
+    const result = await this.quizService.createQuiz(createQuizDto, req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -75,13 +75,13 @@ export class QuizController {
   }
 
   @Delete('delete-quiz/:id')
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   async deleteQuiz(
     @Param() param: IdDto,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const result = await this.quizService.deleteQuiz(param.id);
+    const result = await this.quizService.deleteQuiz(param.id, req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,

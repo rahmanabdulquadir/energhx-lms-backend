@@ -52,7 +52,7 @@ export class ReviewController {
 
   // Get all Reviews
   @Get()
-  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN]))
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllReviews(@Res() res: Response) {
     const result = await this.ReviewService.getAllReviews();
     sendResponse(res, {
