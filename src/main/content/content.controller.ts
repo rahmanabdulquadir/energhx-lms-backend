@@ -173,7 +173,7 @@ export class ContentController {
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
-      message: 'Content and associated data daleted successfully',
+      message: 'Content and associated data deleted successfully',
       data: result,
     });
   }

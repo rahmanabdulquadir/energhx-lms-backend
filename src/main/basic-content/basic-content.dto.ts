@@ -1,4 +1,4 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateBasicContentDto {
   @IsString()
@@ -9,4 +9,13 @@ export class CreateBasicContentDto {
 
   @IsUUID()
   courseId: string;
+}
+export class UpdateBasicContentDto {
+  @IsOptional()
+  @IsString()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  video: string;
 }

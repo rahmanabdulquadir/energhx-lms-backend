@@ -64,10 +64,14 @@ export class ProgramService {
 
   //----------------------------------Get My Programs--------------------------------------
   public async getMyPrograms(user: TUser) {
-    const result = await this.prisma.program.findMany({
+    const result = await this.prisma.userProgram.findMany({
       where: {
-        publishedFor: user.userType,
-      }
+        userId: user.id,
+      },
+      select: {
+        status: true,
+        program: true,
+      },
     });
     return result;
   }
