@@ -255,10 +255,9 @@ export class UserService {
       }));
       // Create all userPrograms
       if (userProgramsData.length > 0) {
-        const res = await this.prisma.userProgram.createMany({
+        await this.prisma.userProgram.createMany({
           data: userProgramsData,
         });
-        console.log(res);
       }
     }
     return updatedUser;

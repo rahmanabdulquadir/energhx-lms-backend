@@ -27,13 +27,13 @@ export class ChangePasswordDto {
   @MinLength(6, {
     message: 'Password is too short. Minimum length is 6 characters.',
   })
-  oldPassword: string;
+  password: string;
 
   @IsString()
   @MinLength(6, {
     message: 'Password is too short. Minimum length is 6 characters.',
   })
-  newPassword: string;
+  confirmPassword: string;
 }
 
 export class ResetPasswordDto {

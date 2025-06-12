@@ -23,6 +23,7 @@ import { StripeModule } from './main/stripe/stripe.module';
 import { StripeService } from './main/stripe/stripe.service';
 import { UserSeeder } from './seed/admin.seed';
 import { AdminModule } from './main/admin/admin.module';
+import { BasicContentModule } from './main/basic-content/basic-content.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AdminModule } from './main/admin/admin.module';
     ReviewModule,
     StripeModule,
     AdminModule,
+    BasicContentModule,
   ],
   controllers: [AppController, UserController],
   providers: [

@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto } from './course.dto';
 import { TUser } from 'src/interface/token.type';
 import adminAccessControl from 'src/utils/adminAccessControl';
-import { UserRole } from '@prisma/client';
+import { UserProgramStatus, UserRole } from '@prisma/client';
 
 @Injectable()
 export class CourseService {
@@ -40,13 +40,13 @@ export class CourseService {
       },
     });
     if (!course) throw new HttpException('Course Not Found', 404);
-    if (user.userType !== 'ADMIN') {
+    if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
       if (course.program.publishedFor !== user.userType)
         throw new HttpException(
           'This course is not for you to view',
           HttpStatus.BAD_REQUEST,
         );
-      const paymentStatus = await this.prisma.userProgram.findUnique({
+      const userProgram = await this.prisma.userProgram.findUnique({
         where: {
           userId_programId: {
             userId: user.id,
@@ -54,17 +54,23 @@ export class CourseService {
           },
         },
       });
-      if (!paymentStatus)
-        throw new HttpException(
-          'You need to pay first to view the course',
-          HttpStatus.BAD_REQUEST,
-        );
+      if (userProgram?.status === UserProgramStatus.BASIC) {
+        const result = await this.prisma.course.findUnique({
+          where: { id },
+          include: {
+            basicContents: true,
+            modules: false,
+          },
+        });
+        return result;
+      }
     }
 
     const result = await this.prisma.course.findUnique({
       where: { id },
       include: {
         modules: true,
+        basicContents: false,
       },
     });
     return result;
@@ -77,7 +83,7 @@ export class CourseService {
   }
 
   //------------------------------------Update Course---------------------------------------
-  public async updateCourse(id: string, data: UpdateCourseDto, user:TUser) {
+  public async updateCourse(id: string, data: UpdateCourseDto, user: TUser) {
     const course = await this.prisma.course.findUnique({
       where: { id },
       select: {
@@ -86,7 +92,7 @@ export class CourseService {
             publishedFor: true,
           },
         },
-      }
+      },
     });
     if (!course) throw new HttpException('Course Not Found', 404);
     if (user.userType === UserRole.ADMIN)

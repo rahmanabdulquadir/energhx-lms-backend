@@ -176,9 +176,10 @@ model Course {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  modules    Module[]
-  reviews    Review[]
-  progresses Progress[]
+  modules       Module[]
+  reviews       Review[]
+  progresses    Progress[]
+  basicContents BasicContent[]
 
   program   Program @relation(fields: [programId], references: [id])
   programId String
@@ -192,6 +193,17 @@ model Module {
   updatedAt DateTime @updatedAt
 
   contents Content[]
+  courseId String
+  course   Course    @relation(fields: [courseId], references: [id])
+}
+
+model BasicContent {
+  id        String   @id @default(uuid())
+  title     String
+  video     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   courseId String
   course   Course @relation(fields: [courseId], references: [id])
 }

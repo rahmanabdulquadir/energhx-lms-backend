@@ -26,25 +26,25 @@ export class ProgramService {
       where: { id },
     });
     if (!program) throw new HttpException('Program Not Found', 404);
-    if (user.userType !== 'ADMIN') {
+    if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
       if (program.publishedFor !== user.userType)
         throw new HttpException(
           'This program is not for you to view',
           HttpStatus.BAD_REQUEST,
         );
-      const paymentStatus = await this.prisma.userProgram.findUnique({
-        where: {
-          userId_programId: {
-            userId: user.id,
-            programId: program.id,
-          },
-        },
-      });
-      if (!paymentStatus)
-        throw new HttpException(
-          'You need to pay first to view the program',
-          HttpStatus.BAD_REQUEST,
-        );
+      // const paymentStatus = await this.prisma.userProgram.findUnique({
+      //   where: {
+      //     userId_programId: {
+      //       userId: user.id,
+      //       programId: program.id,
+      //     },
+      //   },
+      // });
+      // if (!paymentStatus)
+      //   throw new HttpException(
+      //     'You need to pay first to view the program',
+      //     HttpStatus.BAD_REQUEST,
+      //   );
     }
 
     const result = await this.prisma.program.findUnique({

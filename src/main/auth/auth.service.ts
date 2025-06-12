@@ -43,7 +43,6 @@ export class AuthService {
     // const refreshToken = this.jwtService.sign(payload, {
     //   secret: this.configService.getOrThrow('REFRESH_SECRET'),
     // });
-
     return {
       accessToken,
     };
@@ -59,14 +58,14 @@ export class AuthService {
     });
 
     const isCorrectPassword = bcrypt.compare(
-      payload.oldPassword,
+      payload.password,
       userData.password as string,
     );
     if (!isCorrectPassword) {
       throw new HttpException('Password is incorrect', HttpStatus.BAD_REQUEST);
     }
 
-    const hashedPassword: string = await bcrypt.hash(payload.newPassword, 12);
+    const hashedPassword: string = await bcrypt.hash(payload.confirmPassword, 12);
 
     // Update operation
     await this.prisma.user.update({
