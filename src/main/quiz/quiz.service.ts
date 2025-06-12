@@ -83,8 +83,50 @@ export class QuizService {
     const result = await this.prisma.quizInstance.findUnique({
       where: { contentId },
       include: {
-        quizzes: true
-      }
+        quizzes: true,
+      },
+    });
+    return result;
+  }
+
+  // ------------------------------ Get all quizzes ---------------------------------
+  public async getAllQuizzes(contentId: string, user: TUser) {
+    const quizContent = await this.prisma.quizInstance.findUnique({
+      where: { contentId },
+      include: {
+        quizzes: true,
+        content: {
+          select: {
+            module: {
+              select: {
+                course: {
+                  select: {
+                    program: {
+                      select: {
+                        publishedFor: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!quizContent?.quizzes || !quizContent.quizzes.length)
+      throw new HttpException('No quizzes found!', HttpStatus.NOT_FOUND);
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(
+        this.prisma,
+        user,
+        quizContent.content.module.course.program.publishedFor,
+      );
+    const result = await this.prisma.quizInstance.findUnique({
+      where: { contentId },
+      include: {
+        quizzes: true,
+      },
     });
     return result;
   }
@@ -141,15 +183,6 @@ export class QuizService {
       throw new HttpException(
         'You need to pay first to view the quiz',
         HttpStatus.BAD_REQUEST,
-      );
-
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id: user.id, status: 'ACTIVE' }, // TODO: ADD CHECKING IF THE USER HAS DONE PAYMENT FOR THE PROGRAM AND IF THE PROGRAM'S PUBLISHEDFOR MATHCHES THE USER'S USERTYPE
-    });
-    if (!existingUser)
-      throw new HttpException(
-        'You are not authorized to submit this quiz!',
-        HttpStatus.FORBIDDEN,
       );
     return quizContent.quiz.quizzes;
   }

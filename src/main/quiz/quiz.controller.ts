@@ -39,6 +39,22 @@ export class QuizController {
     });
   }
 
+  @Get('get-all-quizzes/:id')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+  async getAllQuizzes(
+    @Param() param: IdDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const result = await this.quizService.getAllQuizzes(param.id, req.user);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Quizzes retrieved successfully',
+      data: result,
+    });
+  }
+
   @Get('start-quiz/:id')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
   async startQuiz(
