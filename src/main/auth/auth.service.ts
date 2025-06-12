@@ -22,7 +22,7 @@ export class AuthService {
   public async loginUser(data: { email: string; password: string }) {
     const { email, password } = data;
     const user = await this.prisma.user.findUnique({
-      where: { email, status: Status.ACTIVE },
+      where: { email, status: Status.ACTIVE, },
     });
 
     if (!user) throw new HttpException('User not found', 401);

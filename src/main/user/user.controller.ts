@@ -8,8 +8,6 @@ import {
   Res,
   HttpStatus,
   Query,
-  UsePipes,
-  ValidationPipe,
   UploadedFile,
   Param,
   Patch,
@@ -18,7 +16,12 @@ import {
 import { UserService } from './user.service';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { Request, Response } from 'express';
-import { CreatePasswordDto, CreateUserDto, UpdateUserDto } from './user.dto';
+import {
+  changeUserStatus,
+  CreatePasswordDto,
+  CreateUserDto,
+  UpdateUserDto,
+} from './user.dto';
 import sendResponse from 'src/utils/sendResponse';
 import { UploadInterceptor } from 'src/common/upload.interceptor';
 import { LibService } from 'src/lib/lib.service';
@@ -48,7 +51,8 @@ export class UserController {
     });
   }
 
-  @Get('/')
+  // Get all users
+  @Get()
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllUsers(@Res() res: Response) {
     const result = await this.userService.getAllUsers();
@@ -56,6 +60,25 @@ export class UserController {
       statusCode: HttpStatus.OK,
       success: true,
       message: 'All Users fetched Successfully',
+      data: result,
+    });
+  }
+  // Change User Status
+  @Patch('change-status/:id')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
+  async changeUserStatus(
+    @Param() param: IdDto,
+    @Res() res: Response,
+    @Body() changeUserStatusDto: changeUserStatus,
+  ) {
+    const result = await this.userService.changeUserStatus(
+      param.id,
+      changeUserStatusDto.status,
+    );
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'User status updated successfully',
       data: result,
     });
   }
@@ -148,7 +171,6 @@ export class UserController {
         })),
       });
     }
-
     const result = await this.userService.updateMe(req.user.id, updateMeDto);
     sendResponse(res, {
       statusCode: HttpStatus.OK,

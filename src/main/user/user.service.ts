@@ -4,7 +4,7 @@ import { TUser } from 'src/interface/token.type';
 import { LibService } from 'src/lib/lib.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './user.dto';
-import { Developer, User } from '@prisma/client';
+import { Developer, Status, User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from 'src/utils/sendMail';
@@ -53,7 +53,10 @@ export class UserService {
           user: true,
         },
       });
-    } else result = null;
+    } else
+      result = await this.prisma.user.findUniqueOrThrow({
+        where: { id: user.id, status: 'ACTIVE' },
+      });
     return result;
   }
 
@@ -63,13 +66,22 @@ export class UserService {
     return result;
   }
 
-  // --------------------------------------- Create User ----------------------------------
+  // ------------------------------- Change User Status -------------------------------
+  public async changeUserStatus(id: string, status: Status) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id },
+    });
+    if (!existingUser)
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: { status },
+    });
+    return updatedUser;
+  }
+
+  // --------------------------------------- Create User ---------------------------------
   public async registerUser(dto: CreateUserDto) {
-    if (dto.userType === 'SUPER_ADMIN')
-      throw new HttpException(
-        'Cannot Create Super Admin!',
-        HttpStatus.UNAUTHORIZED,
-      );
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -130,7 +142,6 @@ export class UserService {
           userType: dto.userType,
         },
       });
-
       if (dto.userType === 'DEVELOPER') {
         await tx.developer.create({
           data: {
@@ -145,17 +156,7 @@ export class UserService {
             email: user.email,
           },
         });
-      } else if (dto.userType === 'ADMIN') {
-        await tx.admin.create({
-          data: {
-            userId: user.id,
-            email: user.email,
-            canAccess: dto.canAccess,
-          },
-        });
       }
-
-      return user;
     });
 
     const verificationLink = `${this.configService.get(
@@ -237,6 +238,29 @@ export class UserService {
       where: { email: payload.email },
       data: { password: hashedPassword, isVerified: true },
     });
+
+    // If the user is a DEVELOPER or SERVER, create userProgram records
+    if (
+      updatedUser.userType === 'DEVELOPER' ||
+      updatedUser.userType === 'SERVER'
+    ) {
+      const programs = await this.prisma.program.findMany({
+        where: { publishedFor: updatedUser.userType },
+        select: { id: true },
+      });
+      // Prepare userProgram records
+      const userProgramsData = programs.map((program) => ({
+        userId: updatedUser.id,
+        programId: program.id,
+      }));
+      // Create all userPrograms
+      if (userProgramsData.length > 0) {
+        const res = await this.prisma.userProgram.createMany({
+          data: userProgramsData,
+        });
+        console.log(res);
+      }
+    }
     return updatedUser;
   }
 

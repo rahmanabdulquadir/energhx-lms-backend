@@ -7,7 +7,7 @@ import {
   IsInt,
   IsEnum,
 } from 'class-validator';
-import { Gender, RolesToAccessForAdmin, UserRole } from '@prisma/client';
+import { Gender, RolesToAccessForAdmin, Status } from '@prisma/client';
 
 export class CreateUserDto {
   @IsEmail()
@@ -55,12 +55,8 @@ export class CreateUserDto {
   @IsString()
   stateId: string;
 
-  @IsEnum(UserRole)
-  userType: UserRole;
-
-  @IsOptional()
   @IsEnum(RolesToAccessForAdmin)
-  canAccess: RolesToAccessForAdmin;
+  userType: RolesToAccessForAdmin;
 }
 
 export class UpdateUserDto {
@@ -114,6 +110,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   stateId: string;
+}
+
+export class changeUserStatus {
+  @IsEnum(Status)
+  status: Status;
 }
 
 export class CreatePasswordDto {
