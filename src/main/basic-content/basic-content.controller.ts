@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, HttpException, HttpStatus, Param, Patch, Post, Req, Res, UploadedFile, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  HttpException,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res,
+  UploadedFile,
+  UseGuards,
+} from '@nestjs/common';
 import { BasicContentService } from './basic-content.service';
 import { LibService } from 'src/lib/lib.service';
 import sendResponse from 'src/utils/sendResponse';
@@ -14,12 +27,12 @@ import { CreateBasicContentDto } from './basic-content.dto';
 
 @Controller('basic-content')
 export class BasicContentController {
-    constructor(
-        private readonly basicContentService: BasicContentService,
-        private readonly lib: LibService,
-      ) {}
+  constructor(
+    private readonly basicContentService: BasicContentService,
+    private readonly lib: LibService,
+  ) {}
 
-//        // Create Content
+//   // Create Content
 //   @Post()
 //   @UploadInterceptor('file')
 //   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
@@ -30,7 +43,10 @@ export class BasicContentController {
 //     @UploadedFile() file: any,
 //   ) {
 //     const parsed = JSON.parse(text);
-//     const createBasicContentDto = plainToInstance(CreateBasicContentDto, parsed);
+//     const createBasicContentDto = plainToInstance(
+//       CreateBasicContentDto,
+//       parsed,
+//     );
 //     if (
 //       createBasicContentDto.contentType == 'DESCRIPTION' &&
 //       !createBasicContentDto.description
@@ -67,7 +83,7 @@ export class BasicContentController {
 //         })),
 //       });
 //     }
-//     const result = await this.contentService.createContent(
+//     const result = await this.basicContentService.createContent(
 //       createBasicContentDto,
 //       req.user,
 //     );
@@ -134,7 +150,7 @@ export class BasicContentController {
 //     }
 
 //     // Proceed with update
-//     const result = await this.contentService.updateContent(
+//     const result = await this.basicContentService.updateContent(
 //       param.id,
 //       updateContentDto,
 //       req.user,
@@ -155,7 +171,10 @@ export class BasicContentController {
 //     @Res() res: Response,
 //     @Param() param: IdDto,
 //   ) {
-//     const result = await this.contentService.deleteContent(param.id, req.user);
+//     const result = await this.basicContentService.deleteContent(
+//       param.id,
+//       req.user,
+//     );
 //     sendResponse(res, {
 //       statusCode: HttpStatus.OK,
 //       success: true,

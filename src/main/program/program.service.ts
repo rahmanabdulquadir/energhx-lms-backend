@@ -62,6 +62,16 @@ export class ProgramService {
     return result;
   }
 
+  //----------------------------------Get My Programs--------------------------------------
+  public async getMyPrograms(user: TUser) {
+    const result = await this.prisma.program.findMany({
+      where: {
+        publishedFor: user.userType,
+      }
+    });
+    return result;
+  }
+
   //-------------------------------------Update Program------------------------------------
   public async updateProgram(id: string, data: UpdateProgramDto) {
     const program = await this.prisma.program.findUnique({

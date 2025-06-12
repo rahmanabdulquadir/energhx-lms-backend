@@ -108,6 +108,20 @@ export class ProgramController {
     });
   }
 
+  // Get my Programs
+  @Get('my-programs/all')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
+  async getMyPrograms(@Res() res: Response, @Req() req: Request) {
+    console.log(req.user);
+    const result = await this.programService.getMyPrograms(req.user);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'My Programs retrieved successfully',
+      data: result,
+    });
+  }
+
   // Update Program
   @Patch(':id')
   @UploadInterceptor('file')
