@@ -29,7 +29,7 @@ export class AdminService {
     }
     if (state.countryId !== dto.countryId) {
       throw new HttpException(
-        'StateId does not belong to the provided countryId',
+        'State does not belong to the provided country',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -90,7 +90,7 @@ export class AdminService {
   public async getAllAdminsFromDB() {
     const existingAdmin = await this.prisma.admin.findMany();
     if (!existingAdmin || existingAdmin.length == 0)
-      throw new HttpException('Admin not found!', HttpStatus.NOT_FOUND);
+      throw new HttpException('No Admin found!', HttpStatus.NOT_FOUND);
     return existingAdmin;
   }
 }

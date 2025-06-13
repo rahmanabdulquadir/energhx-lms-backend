@@ -4,7 +4,7 @@ import { TUser } from 'src/interface/token.type';
 import { LibService } from 'src/lib/lib.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './user.dto';
-import { Developer, Status, User } from '@prisma/client';
+import { Developer, Status, User, UserProgramStatus } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from 'src/utils/sendMail';
@@ -274,11 +274,11 @@ export class UserService {
     });
     if (!existingUser)
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-    // if (existingUser.enrolledPrograms.length == 0)
-    //   throw new HttpException(
-    //     'No enrolled courses found for this user',
-    //     HttpStatus.NOT_FOUND,
-    //   );
+    if (existingUser.enrolledPrograms.length == 0)
+      throw new HttpException(
+        'No enrolled courses found for this user',
+        HttpStatus.NOT_FOUND,
+      );
     const courseProgram = await this.prisma.course.findUnique({
       where: { id: courseId },
       select: {
@@ -299,13 +299,14 @@ export class UserService {
           userId: user.id,
           programId: courseProgram?.programId!,
         },
+        status: { not: UserProgramStatus.BASIC }
       },
     });
-    // if (!isEnrolled)
-    //   throw new HttpException(
-    //     'You are not enrolled in this course',
-    //     HttpStatus.BAD_REQUEST,
-    //   );
+    if (!isEnrolled)
+      throw new HttpException(
+        'You are not enrolled in this course',
+        HttpStatus.BAD_REQUEST,
+      );
 
     // Arrange an array of content for the course
     const modules = await this.prisma.module.findMany({
@@ -383,15 +384,16 @@ export class UserService {
             },
           },
         },
+        status: { not: UserProgramStatus.BASIC }
       },
     });
 
-    // if (!isProgramEnrolled) {
-    //   throw new HttpException(
-    //     'You are not enrolled in this course',
-    //     HttpStatus.FORBIDDEN,
-    //   );
-    // }
+    if (!isProgramEnrolled) {
+      throw new HttpException(
+        'You are not enrolled in this course',
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
     const courseProgress = await this.prisma.progress.findUnique({
       where: {

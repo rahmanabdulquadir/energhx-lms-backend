@@ -9,6 +9,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Request } from 'express';
+import { UserProgramStatus } from '@prisma/client';
 
 @Injectable()
 export class StripeService {
@@ -29,8 +30,12 @@ export class StripeService {
     this.stripe = new Stripe(stripeSecretKey);
   }
 
-  async createCheckoutSession(body: any, userId: string, useremail: string) {
-    const { programId, amount } = body;
+  async createCheckoutSession(
+    body: { programId: string },
+    userId: string,
+    useremail: string,
+  ) {
+    const { programId } = body;
 
     const program = await this.prisma.program.findFirst({
       where: { id: programId },
@@ -47,7 +52,7 @@ export class StripeService {
             product_data: {
               name: 'Instant Payment',
             },
-            unit_amount: amount * 100,
+            unit_amount: program.price * 100,
           },
           quantity: 1,
         },
@@ -93,11 +98,16 @@ export class StripeService {
     const metadata = data.metadata;
 
     if (event.type === 'payment_intent.succeeded') {
-      await this.prisma.userProgram.create({
+      await this.prisma.userProgram.update({
+        where: {
+          userId_programId: {
+            userId: metadata.userId,
+            programId: metadata.programId,
+          },
+        },
         data: {
           paymentIntentId: data.id,
-          userId: metadata.userId,
-          programId: metadata.programId,
+          status: UserProgramStatus.STANDARD,
         },
       });
     }

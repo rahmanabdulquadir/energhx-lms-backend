@@ -68,7 +68,7 @@ export class AdminController {
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
-      message: 'Please check your email to verify your account!',
+      message: 'Admin account has been created successfully!!',
       data: result,
     });
   }

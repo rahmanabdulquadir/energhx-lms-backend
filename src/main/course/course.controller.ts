@@ -87,6 +87,7 @@ export class CourseController {
 
   // Get all Courses
   @Get()
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
   async getAllCourses(@Res() res: Response, @Req() req: Request) {
     const result = await this.courseService.getAllCourses();
     sendResponse(res, {
@@ -144,7 +145,7 @@ export class CourseController {
     const result = await this.courseService.updateCourse(
       param.id,
       updateCourseDto,
-      req.user
+      req.user,
     );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
