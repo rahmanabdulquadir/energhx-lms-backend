@@ -92,7 +92,7 @@ export class UserService {
 
     if (existingUser && !existingUser.isVerified) {
       const verificationLink = `${this.configService.get(
-        'VERIFY_EMAIL_LINK',
+        'FRONTEND_URL',
       )}/user-create-password?token=${token}`;
 
       await this.mailerService.sendMail(
@@ -160,7 +160,7 @@ export class UserService {
     });
 
     const verificationLink = `${this.configService.get(
-      'VERIFY_EMAIL_LINK',
+      'FRONTEND_URL',
     )}/user-create-password?token=${token}`;
 
     await this.mailerService.sendMail(

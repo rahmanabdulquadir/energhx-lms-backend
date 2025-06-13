@@ -91,7 +91,7 @@ export class AuthService {
       secret: this.configService.get('JWT_SECRET'),
       expiresIn: 2592000000,
     });
-    const resetPassLink = `${this.configService.get('RESET_PASS_LINK')}/reset-password?token=${token}`;
+    const resetPassLink = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${token}`;
     await this.mailerService.sendMail(
       user.email,
       `<div>

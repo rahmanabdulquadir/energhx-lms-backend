@@ -19,11 +19,8 @@ export class QuizService {
     let content = await this.prisma.content.findUnique({
       where: { id: contentId },
     });
-
     if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
-
-    console.log('contentId => ', contentId);
     let quizInstance: any;
     quizInstance = await this.prisma.quizInstance.findUnique({
       where: { contentId },
@@ -48,11 +45,6 @@ export class QuizService {
         },
       },
     });
-    console.log('quizInstance => ', quizInstance);
-    console.log(
-      'published for => ',
-      quizInstance.content.module.course.program.publishedFor,
-    );
     if (quizInstance && user.userType === UserRole.ADMIN)
       await adminAccessControl(
         this.prisma,

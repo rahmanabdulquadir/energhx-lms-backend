@@ -1,10 +1,19 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAdminDto } from './admin.dto';
+import { LibService } from 'src/lib/lib.service';
+import { MailerService } from 'src/utils/sendMail';
+import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly lib: LibService,
+    private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
+  ) {}
 
   // -------------------------------- Add an Admin --------------------------------
   public async addAnAdmin(dto: CreateAdminDto) {
@@ -24,6 +33,10 @@ export class AdminService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    const hashedPassword = await this.lib.hashPassword({
+      password: this.configService.get('ADMIN_PASS') as string,
+      round: 6,
+    });
     await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -40,7 +53,9 @@ export class AdminService {
           city: dto.city,
           countryId: dto.countryId,
           stateId: dto.stateId,
-          userType: 'ADMIN',
+          userType: UserRole.ADMIN,
+          password: hashedPassword,
+          isVerified: true,
         },
       });
       await tx.admin.create({
@@ -50,6 +65,18 @@ export class AdminService {
           canAccess: dto.canAccess,
         },
       });
+      await this.mailerService.sendMail(
+        dto.email,
+        `<div>
+          <p>Hello ${dto.firstName},</p>
+          <p>Congratulations, you are assigned as a ${dto.canAccess} admin in Energhx. Please login with your mail and the initial password (provided below) into the system. Don't forget to change the password as soon as you are logged in.</p>
+          <p>Initial Password: <strong>${this.configService.get('ADMIN_PASS')}</strong></p>
+          <a href="${this.configService.get('FRONTEND_URL')}/login">Click here to login</a>
+          <p>Thank you for being a part of Energhx.</p>
+        </div>`,
+        'Congratulations on getting appointed as admin in energhx',
+        'Click on the button to login into energhx as admin, and change your password.',
+      );
     });
   }
 
