@@ -14,9 +14,15 @@ export class LibService {
   private readonly logger = new Logger(LibService.name);
   private getResourceType(path: string): 'image' | 'video' | 'raw' {
     const mimeType = mime.lookup(path) || '';
-
+    const extension = path.split('.').pop()?.toLowerCase();
     if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('video/')) return 'video';
+    if (
+      mimeType.startsWith('video/') ||
+      ['mp4', 'mov', 'avi', 'mkv'].includes(extension || '')
+    ) {
+      return 'video';
+    }
+
     return 'raw';
   }
 
@@ -60,7 +66,6 @@ export class LibService {
     path: string;
   }): Promise<UploadApiResponse> {
     const resourceType = this.getResourceType(path);
-
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
         path,
