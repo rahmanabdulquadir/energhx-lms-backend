@@ -2,6 +2,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProgramDto, UpdateProgramDto } from './program.dto';
 import { TUser } from 'src/interface/token.type';
+import { UserRole } from '@prisma/client';
+import adminAccessControl from 'src/utils/adminAccessControl';
 
 @Injectable()
 export class ProgramService {
@@ -41,25 +43,14 @@ export class ProgramService {
       where: { id },
     });
     if (!program) throw new HttpException('Program Not Found', 404);
+    if (user.userType === UserRole.ADMIN)
+      await adminAccessControl(this.prisma, user, program.publishedFor);
     if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
       if (program.publishedFor !== user.userType)
         throw new HttpException(
           'This program is not for you to view',
           HttpStatus.BAD_REQUEST,
         );
-      // const paymentStatus = await this.prisma.userProgram.findUnique({
-      //   where: {
-      //     userId_programId: {
-      //       userId: user.id,
-      //       programId: program.id,
-      //     },
-      //   },
-      // });
-      // if (!paymentStatus)
-      //   throw new HttpException(
-      //     'You need to pay first to view the program',
-      //     HttpStatus.BAD_REQUEST,
-      //   );
     }
 
     const result = await this.prisma.program.findUnique({
@@ -95,7 +86,15 @@ export class ProgramService {
       },
       select: {
         status: true,
-        program: true,
+        program: {
+          include: {
+            _count: {
+              select: {
+                courses: true,
+              },
+            },
+          },
+        },
       },
     });
     return result;
