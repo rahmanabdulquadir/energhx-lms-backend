@@ -299,7 +299,7 @@ export class UserService {
           userId: user.id,
           programId: courseProgram?.programId!,
         },
-        status: { not: UserProgramStatus.BASIC }
+        status: { not: UserProgramStatus.BASIC },
       },
     });
     if (!isEnrolled)
@@ -356,6 +356,48 @@ export class UserService {
       update: { percentage, contentId },
       create: { userId: user.id, courseId, percentage, contentId },
     });
+
+    // If the user has completed all the courses in the program, update the userProgram status
+    if (percentage === 100) {
+      const programCourses = await this.prisma.course.findMany({
+        where: { programId: courseProgram.programId },
+        select: { id: true },
+      });
+      const programCourseIds = programCourses.map((course) => course.id);
+    
+      // Get all user's progress for those courses
+      const userProgresses = await this.prisma.progress.findMany({
+        where: {
+          userId: user.id,
+          courseId: { in: programCourseIds },
+        },
+        select: {
+          courseId: true,
+          percentage: true,
+        },
+      });
+    
+      // Check if all courses are 100% completed
+      const allCompleted = programCourseIds.every((courseId) =>
+        userProgresses.some(
+          (progress) => progress.courseId === courseId && progress.percentage === 100,
+        )
+      );
+      if (allCompleted) {
+        await this.prisma.userProgram.update({
+          where: {
+            userId_programId: {
+              userId: user.id,
+              programId: courseProgram.programId,
+            },
+          },
+          data: {
+            status: UserProgramStatus.CERTIFIED,
+          },
+        });
+      }
+    }
+    
     const watchedContents = contentIds.slice(0, index + 1);
     return {
       watchedContents,
@@ -384,7 +426,7 @@ export class UserService {
             },
           },
         },
-        status: { not: UserProgramStatus.BASIC }
+        status: { not: UserProgramStatus.BASIC },
       },
     });
 

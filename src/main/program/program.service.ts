@@ -6,6 +6,7 @@ import { TUser } from 'src/interface/token.type';
 @Injectable()
 export class ProgramService {
   constructor(private prisma: PrismaService) {}
+
   // ------------------------------Create Program-------------------------------------
   public async createProgram(data: CreateProgramDto) {
     const result = await this.prisma.program.create({
@@ -17,6 +18,20 @@ export class ProgramService {
         publishedFor: data.publishedFor,
       },
     });
+    const users = await this.prisma.user.findMany({
+      where: { userType: data.publishedFor },
+      select: { id: true },
+    });
+    const userProgramData = users.map((user) => ({
+      userId: user.id,
+      programId: result.id,
+    }));
+
+    if (userProgramData.length > 0) {
+      await this.prisma.userProgram.createMany({
+        data: userProgramData,
+      });
+    }
     return result;
   }
 
@@ -50,9 +65,19 @@ export class ProgramService {
     const result = await this.prisma.program.findUnique({
       where: { id },
       include: {
-        courses: true,
+        courses: {
+          include: {
+            _count: {
+              select: {
+                modules: true,
+                reviews: true,
+              },
+            },
+          },
+        },
       },
     });
+
     return result;
   }
 
@@ -82,7 +107,6 @@ export class ProgramService {
       where: { id },
     });
     if (!program) throw new HttpException('Program Not Found', 404);
-
     const result = await this.prisma.program.update({
       where: { id },
       data,
@@ -95,15 +119,20 @@ export class ProgramService {
     return this.prisma.$transaction(async (tx) => {
       const program = await tx.program.findUnique({
         where: { id },
-        include: {
+        select: {
+          id: true,
           courses: {
-            include: {
+            select: {
+              id: true,
               modules: {
-                include: {
+                select: {
+                  id: true,
                   contents: {
-                    include: {
+                    select: {
+                      id: true,
                       quiz: {
-                        include: {
+                        select: {
+                          id: true,
                           quizzes: true,
                           quizSubmissions: true,
                         },
