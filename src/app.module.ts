@@ -21,7 +21,7 @@ import { PaymentModule } from './main/payment/payment.module';
 import { ReviewModule } from './main/review/review.module';
 import { StripeModule } from './main/stripe/stripe.module';
 import { StripeService } from './main/stripe/stripe.service';
-// import { UserSeeder } from './seed/admin.seed';
+import { UserSeeder } from './seed/admin.seed';
 import { AdminModule } from './main/admin/admin.module';
 import { BasicContentModule } from './main/basic-content/basic-content.module';
 
@@ -56,7 +56,7 @@ import { BasicContentModule } from './main/basic-content/basic-content.module';
     UserService,
     MailerService,
     StripeService,
-    // UserSeeder,
+    UserSeeder,
   ],
 })
 export class AppModule {}

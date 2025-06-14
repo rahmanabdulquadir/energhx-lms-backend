@@ -56,9 +56,11 @@ export class CourseService {
           },
         },
       });
+      console.log(userProgram)
       if (
-        userProgram?.status !== UserProgramStatus.STANDARD &&
-        userProgram?.status !== UserProgramStatus.CERTIFIED
+        !userProgram ||
+        (userProgram?.status !== UserProgramStatus.STANDARD &&
+          userProgram?.status !== UserProgramStatus.CERTIFIED)
       ) {
         const result = await this.prisma.course.findUnique({
           where: { id },

@@ -93,6 +93,7 @@ export class UserSeeder implements OnModuleInit {
             city: '',
             countryId: country.id,
             stateId: state!.id,
+            isVerified: true,
             password: hashedPassword,
             userType: UserRole.SUPER_ADMIN,
           },
