@@ -9,7 +9,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Request } from 'express';
-import { UserProgramStatus } from '@prisma/client';
+import { PaymentStatus, UserProgramStatus } from '@prisma/client';
 
 @Injectable()
 export class StripeService {
@@ -36,13 +36,16 @@ export class StripeService {
     useremail: string,
   ) {
     const { programId } = body;
-
     const program = await this.prisma.program.findFirst({
       where: { id: programId },
     });
     if (!program) throw new HttpException('Program not found!', 404);
 
-    console.log("userId and programId before creating session in createCheckoutSession -> ", userId, programId);
+    console.log(
+      'userId and programId before creating session in createCheckoutSession -> ',
+      userId,
+      programId,
+    );
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: useremail,
@@ -59,8 +62,8 @@ export class StripeService {
         },
       ],
       mode: 'payment',
-      success_url: 'http://localhost:3000/payment/success',
-      cancel_url: 'http://localhost:3000/payment/success',
+      success_url: `${this.configService.get('FRONTEND_URL')}/payment/success`,
+      cancel_url: `${this.configService.get('FRONTEND_URL')}/payment/success`,
       payment_intent_data: {
         metadata: {
           userId,
@@ -77,14 +80,14 @@ export class StripeService {
   async handleWebhook(req: RawBodyRequest<Request>) {
     const signature = req.headers['stripe-signature'] as string;
     const rawBody = req.rawBody;
-  
+
     if (!rawBody) {
       console.error('❌ No rawBody found in request');
       throw new BadRequestException('No webhook payload was provided.');
     }
-  
+
     let event: Stripe.Event;
-  
+
     try {
       event = this.stripe.webhooks.constructEvent(
         rawBody,
@@ -95,24 +98,24 @@ export class StripeService {
       console.error('❌ Stripe signature verification failed:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
     }
-  
+
     console.log('✅ Stripe event received:', event.type);
-  
+
     const data = event.data.object as Stripe.PaymentIntent;
     const metadata = data.metadata;
-  
+
     console.log('📦 Metadata:', metadata);
     console.log('🔎 PaymentIntent ID:', data.id);
-  
+
     const userId = metadata.userId;
     const programId = metadata.programId;
-  
+
     if (event.type === 'payment_intent.succeeded') {
       if (!userId || !programId) {
         console.warn('⚠️ Missing metadata fields:', { userId, programId });
         return { received: true, warning: 'Missing metadata' };
       }
-  
+
       const existing = await this.prisma.userProgram.findUnique({
         where: {
           userId_programId: {
@@ -121,12 +124,12 @@ export class StripeService {
           },
         },
       });
-  
+
       if (!existing) {
         console.warn('⚠️ No userProgram found for:', { userId, programId });
         return { received: true, warning: 'No matching userProgram found' };
       }
-  
+
       await this.prisma.userProgram.update({
         where: {
           userId_programId: {
@@ -137,20 +140,25 @@ export class StripeService {
         data: {
           paymentIntentId: data.id,
           status: UserProgramStatus.STANDARD,
+          paymentMethod: "card",
+          paymentStatus: PaymentStatus.SUCCESS
         },
       });
-  
-      console.log('✅ userProgram updated:', { userId, programId, paymentIntentId: data.id });
+
+      console.log('✅ userProgram updated:', {
+        userId,
+        programId,
+        paymentIntentId: data.id,
+      });
     }
-  
+
     if (event.type === 'payment_intent.payment_failed') {
       console.warn('⚠️ Payment failed for:', { userId, programId });
       // Optional: mark it failed in DB
     }
-  
+
     return { received: true, type: event.type };
   }
-  
 
   // async constructWebhookEvent(payload: Buffer, signature: string) {
   //   const endpointSecret = this.configService.get<string>(
@@ -203,7 +211,10 @@ export class StripeService {
         )
       : null;
 
-      console.log("Metadata inside getCheckoutSessionDetails -> ", session.metadata)
+    console.log(
+      'Metadata inside getCheckoutSessionDetails -> ',
+      session.metadata,
+    );
     return {
       amountTotal: session.amount_total ? session.amount_total / 100 : null, // convert from cents to dollars
       currency: session.currency,

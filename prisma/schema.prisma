@@ -138,7 +138,6 @@ model Experience {
 }
 
 model UserProgram {
-  joinedAt        DateTime          @default(now())
   paymentStatus   PaymentStatus     @default(PENDING)
   paymentIntentId String?
   paymentMethod   String?
