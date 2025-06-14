@@ -4,13 +4,11 @@ import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
 import { GlobalErrorHandlerFilter } from './error/globalErrorHandler.filter';
 import { ValidationPipe } from '@nestjs/common';
-// import { UserSeeder } from './seed/admin.seed';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    rawBody: true,
-    bodyParser: true,
-  });
+  const app = await NestFactory.create(AppModule);
+
+  // ✅ Attach raw body only for Stripe webhook requests
   app.use(
     express.json({
       verify: (req: any, res, buf) => {
@@ -20,13 +18,12 @@ async function bootstrap() {
       },
     }),
   );
-  app.enableCors();
+
   app.use(cookieParser());
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new GlobalErrorHandlerFilter());
-  // const seeder = app.get(UserSeeder);
-  // await seeder.seedAdmin();
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

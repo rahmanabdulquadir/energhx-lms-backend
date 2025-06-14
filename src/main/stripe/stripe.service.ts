@@ -42,6 +42,7 @@ export class StripeService {
     });
     if (!program) throw new HttpException('Program not found!', 404);
 
+    console.log("userId and programId before creating session in createCheckoutSession -> ", userId, programId);
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: useremail,
@@ -75,34 +76,62 @@ export class StripeService {
 
   async handleWebhook(req: RawBodyRequest<Request>) {
     const signature = req.headers['stripe-signature'] as string;
-    let event: Stripe.Event;
-
     const rawBody = req.rawBody;
-
+  
     if (!rawBody) {
+      console.error('❌ No rawBody found in request');
       throw new BadRequestException('No webhook payload was provided.');
     }
-
+  
+    let event: Stripe.Event;
+  
     try {
       event = this.stripe.webhooks.constructEvent(
         rawBody,
         signature,
         'whsec_24a924834485446726efd0eaeb8659641ab104ca62b6c1833664dc1a3665baf0',
       );
-    } catch {
+    } catch (err) {
+      console.error('❌ Stripe signature verification failed:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
     }
-
+  
+    console.log('✅ Stripe event received:', event.type);
+  
     const data = event.data.object as Stripe.PaymentIntent;
-    console.log();
     const metadata = data.metadata;
-
+  
+    console.log('📦 Metadata:', metadata);
+    console.log('🔎 PaymentIntent ID:', data.id);
+  
+    const userId = metadata.userId;
+    const programId = metadata.programId;
+  
     if (event.type === 'payment_intent.succeeded') {
+      if (!userId || !programId) {
+        console.warn('⚠️ Missing metadata fields:', { userId, programId });
+        return { received: true, warning: 'Missing metadata' };
+      }
+  
+      const existing = await this.prisma.userProgram.findUnique({
+        where: {
+          userId_programId: {
+            userId,
+            programId,
+          },
+        },
+      });
+  
+      if (!existing) {
+        console.warn('⚠️ No userProgram found for:', { userId, programId });
+        return { received: true, warning: 'No matching userProgram found' };
+      }
+  
       await this.prisma.userProgram.update({
         where: {
           userId_programId: {
-            userId: metadata.userId,
-            programId: metadata.programId,
+            userId,
+            programId,
           },
         },
         data: {
@@ -110,13 +139,18 @@ export class StripeService {
           status: UserProgramStatus.STANDARD,
         },
       });
+  
+      console.log('✅ userProgram updated:', { userId, programId, paymentIntentId: data.id });
     }
-
+  
     if (event.type === 'payment_intent.payment_failed') {
+      console.warn('⚠️ Payment failed for:', { userId, programId });
+      // Optional: mark it failed in DB
     }
-
+  
     return { received: true, type: event.type };
   }
+  
 
   // async constructWebhookEvent(payload: Buffer, signature: string) {
   //   const endpointSecret = this.configService.get<string>(
@@ -169,6 +203,7 @@ export class StripeService {
         )
       : null;
 
+      console.log("Metadata inside getCheckoutSessionDetails -> ", session.metadata)
     return {
       amountTotal: session.amount_total ? session.amount_total / 100 : null, // convert from cents to dollars
       currency: session.currency,
@@ -177,7 +212,7 @@ export class StripeService {
       originalAmount: session.metadata?.originalAmount || null,
       discountedAmount: session.metadata?.discountedAmount || null,
       userId: session.metadata?.userId || null,
-      planId: session.metadata?.planId || null,
+      programId: session.metadata?.programId || null,
       paymentIntentId: session.payment_intent,
       created: session.created,
       paymentDetails: paymentIntent || null,
