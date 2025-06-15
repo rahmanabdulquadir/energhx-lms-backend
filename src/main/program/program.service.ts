@@ -114,93 +114,99 @@ export class ProgramService {
   }
 
   //--------------------------------Delete Program--------------------------------------
-  public async deleteProgram(id: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const program = await tx.program.findUnique({
-        where: { id },
+public async deleteProgram(id: string) {
+  // Step 1: Collect all the IDs BEFORE the transaction
+  const program = await this.prisma.program.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      courses: {
         select: {
           id: true,
-          courses: {
+          modules: {
             select: {
               id: true,
-              modules: {
+              contents: {
                 select: {
                   id: true,
-                  contents: {
+                  quiz: {
                     select: {
                       id: true,
-                      quiz: {
-                        select: {
-                          id: true,
-                          quizzes: true,
-                          quizSubmissions: true,
-                        },
-                      },
                     },
                   },
                 },
               },
-              reviews: true,
-              progresses: true,
             },
           },
-          enrolledUsers: true,
         },
-      });
+      },
+    },
+  });
 
-      if (!program) {
-        throw new HttpException('Program not found', 404);
-      }
-
-      for (const course of program.courses) {
-        for (const module of course.modules) {
-          for (const content of module.contents) {
-            if (content.quiz) {
-              await tx.quizSubmission.deleteMany({
-                where: { quizInstanceId: content.quiz.id },
-              });
-
-              await tx.quiz.deleteMany({
-                where: { quizInstanceId: content.quiz.id },
-              });
-
-              await tx.quizInstance.delete({
-                where: { id: content.quiz.id },
-              });
-            }
-
-            await tx.content.delete({
-              where: { id: content.id },
-            });
-          }
-
-          await tx.module.delete({
-            where: { id: module.id },
-          });
-        }
-
-        await tx.review.deleteMany({
-          where: { courseId: course.id },
-        });
-
-        await tx.progress.deleteMany({
-          where: { courseId: course.id },
-        });
-
-        await tx.course.delete({
-          where: { id: course.id },
-        });
-      }
-
-      await tx.userProgram.deleteMany({
-        where: { programId: id },
-      });
-
-      await tx.program.delete({
-        where: { id },
-      });
-
-      return null;
-    });
+  if (!program) {
+    throw new HttpException('Program not found', 404);
   }
+
+  // Collect all the necessary IDs
+  const courseIds = program.courses.map((c) => c.id);
+  const moduleIds = program.courses.flatMap((c) => c.modules.map((m) => m.id));
+  const contentIds = program.courses.flatMap((c) =>
+    c.modules.flatMap((m) => m.contents.map((ct) => ct.id))
+  );
+  const quizInstanceIds = program.courses.flatMap((c) =>
+    c.modules.flatMap((m) =>
+      m.contents.flatMap((ct) => (ct.quiz ? [ct.quiz.id] : []))
+    )
+  );
+
+  // Step 2: Perform deletions inside transaction
+  return this.prisma.$transaction(async (tx) => {
+    await tx.quizSubmission.deleteMany({
+      where: { quizInstanceId: { in: quizInstanceIds } },
+    });
+
+    await tx.quiz.deleteMany({
+      where: { quizInstanceId: { in: quizInstanceIds } },
+    });
+
+    await tx.quizInstance.deleteMany({
+      where: { id: { in: quizInstanceIds } },
+    });
+
+    await tx.content.deleteMany({
+      where: { id: { in: contentIds } },
+    });
+
+    await tx.module.deleteMany({
+      where: { id: { in: moduleIds } },
+    });
+
+    await tx.basicContent.deleteMany({
+      where: { courseId: { in: courseIds } },
+    });
+
+    await tx.review.deleteMany({
+      where: { courseId: { in: courseIds } },
+    });
+
+    await tx.progress.deleteMany({
+      where: { courseId: { in: courseIds } },
+    });
+
+    await tx.course.deleteMany({
+      where: { id: { in: courseIds } },
+    });
+
+    await tx.userProgram.deleteMany({
+      where: { programId: id },
+    });
+
+    await tx.program.delete({
+      where: { id },
+    });
+
+    return null;
+  }, { timeout: 10000 });
+}
+
 }
