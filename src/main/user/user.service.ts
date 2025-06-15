@@ -23,6 +23,7 @@ export class UserService {
   public async getMe(user: TUser) {
     let result: Developer | Server | User | null;
     if (
+      user.userType !== "SUPER_ADMIN" &&
       user.userType !== 'DEVELOPER' &&
       user.userType !== 'SERVER' &&
       user.userType !== 'ADMIN'
