@@ -49,7 +49,7 @@ export class ModuleService {
     });
     if (!module) throw new HttpException('Module Not Found', 404);
 
-    if (user.userType !== 'ADMIN') {
+    if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
       if (module.course.program.publishedFor !== user.userType)
         throw new HttpException(
           'This course is not for you to view',
