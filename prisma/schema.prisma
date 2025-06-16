@@ -40,6 +40,8 @@ model User {
   quizSubmissions  QuizSubmission[]
   progresses       Progress[]
   enrolledPrograms UserProgram[]
+
+  Certificate Certificate[]
 }
 
 model Country {
@@ -275,6 +277,15 @@ model Progress {
   content   Content @relation(fields: [contentId], references: [id])
 
   @@unique([userId, courseId])
+}
+
+model Certificate {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  courseId  String
+  average   Float
+  issuedAt  DateTime @default(now())
 }
 
 model Review {
