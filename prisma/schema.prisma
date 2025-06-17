@@ -186,6 +186,8 @@ model Course {
   programId String
 
   QuizInstance QuizInstance[]
+
+  Certificate Certificate[]
 }
 
 model Module {
@@ -247,9 +249,8 @@ model QuizInstance {
   quizzes         Quiz[] // QuizInstance contains several quizzes
   quizSubmissions QuizSubmission[] // QuizInstance contains several userQuizSubmissions.
 
-   courseId String
+  courseId String
   course   Course @relation(fields: [courseId], references: [id])
-
 
   contentId String  @unique
   content   Content @relation(fields: [contentId], references: [id])
@@ -288,10 +289,15 @@ model Progress {
 model Certificate {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   courseId  String
   average   Float
   issuedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
 }
 
 model Review {

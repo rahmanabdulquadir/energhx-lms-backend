@@ -15,7 +15,7 @@ export class GradingService {
       throw new BadRequestException('Invalid quizInstanceId');
     }
 
-    return await this.prisma.quizSubmission.create({
+    return this.prisma.quizSubmission.create({
       data: {
         userId: dto.userId,
         quizInstanceId: dto.quizInstanceId,
@@ -32,20 +32,34 @@ export class GradingService {
         userId,
         isCompleted: true,
         quizInstance: {
-          is: {
-            courseId: courseId,
+          content: {
+            module: {
+              courseId,
+            },
           },
         },
       },
       include: {
-        quizInstance: true,
+        quizInstance: {
+          include: {
+            content: {
+              include: {
+                module: {
+                  include: {
+                    course: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     if (!submissions.length) return 0;
 
-    const percentages = submissions.map(sub => {
-      const total = (sub.quizInstance as any).totalQuestions;
+    const percentages = submissions.map((sub) => {
+      const total = sub.quizInstance.totalMark ?? 0;
       return total > 0 ? (sub.correctAnswers / total) * 100 : 0;
     });
 
@@ -67,7 +81,11 @@ export class GradingService {
     if (existing) return existing;
 
     return this.prisma.certificate.create({
-      data: { userId, courseId, average },
+      data: {
+        userId,
+        courseId,
+        average,
+      },
     });
   }
 
