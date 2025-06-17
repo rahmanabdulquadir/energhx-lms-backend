@@ -184,6 +184,8 @@ model Course {
 
   program   Program @relation(fields: [programId], references: [id])
   programId String
+
+  QuizInstance QuizInstance[]
 }
 
 model Module {
@@ -244,6 +246,10 @@ model QuizInstance {
 
   quizzes         Quiz[] // QuizInstance contains several quizzes
   quizSubmissions QuizSubmission[] // QuizInstance contains several userQuizSubmissions.
+
+   courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
 
   contentId String  @unique
   content   Content @relation(fields: [contentId], references: [id])

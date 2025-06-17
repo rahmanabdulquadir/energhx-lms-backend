@@ -20,46 +20,69 @@ export class UserService {
   ) {}
 
   // ------------------------------- Get Me -------------------------------
-  public async getMe(user: TUser) {
-    let result: Developer | Server | User | null;
-    if (
-      user.userType !== "SUPER_ADMIN" &&
-      user.userType !== 'DEVELOPER' &&
-      user.userType !== 'SERVER' &&
-      user.userType !== 'ADMIN'
-    ) {
-      throw new HttpException(
-        'Invalid User role provided',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (user.userType == 'DEVELOPER') {
-      result = await this.prisma.developer.findUniqueOrThrow({
-        where: { userId: user.id, status: 'ACTIVE' },
-        include: {
-          user: true,
-        },
-      });
-    } else if (user.userType == 'SERVER') {
-      result = await this.prisma.server.findUniqueOrThrow({
-        where: { userId: user.id, status: 'ACTIVE' },
-        include: {
-          user: true,
-        },
-      });
-    } else if (user.userType == 'ADMIN') {
-      result = await this.prisma.admin.findUniqueOrThrow({
-        where: { userId: user.id, status: 'ACTIVE' },
-        include: {
-          user: true,
-        },
-      });
-    } else
-      result = await this.prisma.user.findUniqueOrThrow({
-        where: { id: user.id, status: 'ACTIVE' },
-      });
-    return result;
+ public async getMe(user: TUser) {
+  if (
+    user.userType !== "SUPER_ADMIN" &&
+    user.userType !== 'DEVELOPER' &&
+    user.userType !== 'SERVER' &&
+    user.userType !== 'ADMIN'
+  ) {
+    throw new HttpException(
+      'Invalid User role provided',
+      HttpStatus.BAD_REQUEST,
+    );
   }
+
+  if (user.userType === 'DEVELOPER') {
+    const developer = await this.prisma.developer.findUniqueOrThrow({
+      where: { userId: user.id, status: 'ACTIVE' },
+      include: { user: true },
+    });
+
+    return {
+      userId: developer.user.id,
+      status: developer.status,
+      user: developer.user,
+    };
+  }
+
+  if (user.userType === 'SERVER') {
+    const server = await this.prisma.server.findUniqueOrThrow({
+      where: { userId: user.id, status: 'ACTIVE' },
+      include: { user: true },
+    });
+
+    return {
+      userId: server.user.id,
+      status: server.status,
+      user: server.user,
+    };
+  }
+
+  if (user.userType === 'ADMIN') {
+    const admin = await this.prisma.admin.findUniqueOrThrow({
+      where: { userId: user.id, status: 'ACTIVE' },
+      include: { user: true },
+    });
+
+    return {
+      userId: admin.user.id,
+      status: admin.status,
+      user: admin.user,
+    };
+  }
+
+  // SUPER_ADMIN fallback
+  const superAdmin = await this.prisma.user.findUniqueOrThrow({
+    where: { id: user.id, status: 'ACTIVE' },
+  });
+
+  return {
+    userId: superAdmin.id,
+    status: superAdmin.status,
+    user: superAdmin,
+  };
+}
 
   // ------------------------------- Get All Users -------------------------------
   public async getAllUsers() {

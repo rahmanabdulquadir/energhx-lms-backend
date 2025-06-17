@@ -16,9 +16,22 @@ export class QuizService {
     { contentId, quizzesData }: CreateQuizDto,
     user: TUser,
   ) {
-    let content = await this.prisma.content.findUnique({
+    const content = await this.prisma.content.findUnique({
       where: { id: contentId },
+      include: {
+        module: {
+          include: {
+            course: true,
+          },
+        },
+      },
     });
+    
+    if (!content)
+      throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+    
+    // ✅ Extract courseId from nested structure
+    const courseId = content.module.course.id;
     if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
     let quizInstance: any;
@@ -57,6 +70,7 @@ export class QuizService {
         data: {
           contentId,
           totalMark: quizzesData.length,
+          courseId
         },
       });
     }
