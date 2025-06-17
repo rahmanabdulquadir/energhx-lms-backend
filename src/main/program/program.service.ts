@@ -203,53 +203,56 @@ public async deleteProgram(id: string) {
   );
 
   // Step 2: Perform deletions inside transaction
-  return this.prisma.$transaction(async (tx) => {
-    await tx.quizSubmission.deleteMany({
-      where: { quizInstanceId: { in: quizInstanceIds } },
-    });
+  return this.prisma.$transaction(
+    async (tx) => {
+      await tx.quizSubmission.deleteMany({
+        where: { quizInstanceId: { in: quizInstanceIds } },
+      });
 
-    await tx.quiz.deleteMany({
-      where: { quizInstanceId: { in: quizInstanceIds } },
-    });
+      await tx.quiz.deleteMany({
+        where: { quizInstanceId: { in: quizInstanceIds } },
+      });
 
-    await tx.quizInstance.deleteMany({
-      where: { id: { in: quizInstanceIds } },
-    });
+      await tx.quizInstance.deleteMany({
+        where: { id: { in: quizInstanceIds } },
+      });
 
-    await tx.content.deleteMany({
-      where: { id: { in: contentIds } },
-    });
+      await tx.content.deleteMany({
+        where: { id: { in: contentIds } },
+      });
 
-    await tx.module.deleteMany({
-      where: { id: { in: moduleIds } },
-    });
+      await tx.module.deleteMany({
+        where: { id: { in: moduleIds } },
+      });
 
-    await tx.basicContent.deleteMany({
-      where: { courseId: { in: courseIds } },
-    });
+      await tx.basicContent.deleteMany({
+        where: { courseId: { in: courseIds } },
+      });
 
-    await tx.review.deleteMany({
-      where: { courseId: { in: courseIds } },
-    });
+      await tx.review.deleteMany({
+        where: { courseId: { in: courseIds } },
+      });
 
-    await tx.progress.deleteMany({
-      where: { courseId: { in: courseIds } },
-    });
+      await tx.progress.deleteMany({
+        where: { courseId: { in: courseIds } },
+      });
 
-    await tx.course.deleteMany({
-      where: { id: { in: courseIds } },
-    });
+      await tx.course.deleteMany({
+        where: { id: { in: courseIds } },
+      });
 
-    await tx.userProgram.deleteMany({
-      where: { programId: id },
-    });
+      await tx.userProgram.deleteMany({
+        where: { programId: id },
+      });
 
-    await tx.program.delete({
-      where: { id },
-    });
+      await tx.program.delete({
+        where: { id },
+      });
 
-    return null;
-  }, { timeout: 10000 });
+      return null;
+    },
+    { timeout: 10000 }
+  );
 }
 
 }
