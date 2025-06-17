@@ -93,4 +93,20 @@ export class AdminService {
       throw new HttpException('No Admin found!', HttpStatus.NOT_FOUND);
     return existingAdmin;
   }
+
+  public async deleteAnAdmin(id: string) {
+  const admin = await this.prisma.admin.findUnique({ where: { id } });
+
+  if (!admin) {
+    throw new HttpException('Admin not found', HttpStatus.NOT_FOUND);
+  }
+
+  await this.prisma.$transaction(async (tx) => {
+    // Delete the admin record
+    await tx.admin.delete({ where: { id } });
+
+    // Delete the user record linked to this admin
+    await tx.user.delete({ where: { id: admin.userId } });
+  });
+}
 }

@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
+  Param,
   Post,
   Req,
   Res,
@@ -96,4 +98,16 @@ export class AdminController {
       data: result,
     });
   }
+
+  @Delete('/:id')
+@UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
+async deleteAdmin(@Param('id') id: string, @Res() res: Response) {
+  await this.adminService.deleteAnAdmin(id);
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: 'Admin deleted successfully!',
+    data: "NO ADMIN IS AVAILABLE REGARDING THIS ID"
+  });
+}
 }
