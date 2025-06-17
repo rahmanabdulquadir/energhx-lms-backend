@@ -79,26 +79,69 @@ export class ProgramService {
   }
 
   //----------------------------------Get My Programs--------------------------------------
-  public async getMyPrograms(user: TUser) {
-    const result = await this.prisma.userProgram.findMany({
-      where: {
-        userId: user.id,
-      },
-      select: {
-        status: true,
-        program: {
-          include: {
-            _count: {
-              select: {
-                courses: true,
-              },
+public async getMyPrograms(user: TUser) {
+  console.log('[DEBUG] Fetching user programs for:', user.id);
+
+  const userPrograms = await this.prisma.userProgram.findMany({
+    where: {
+      userId: user.id,
+    },
+    include: {
+      program: {
+        include: {
+          _count: {
+            select: {
+              courses: true,
             },
           },
         },
       },
-    });
-    return result;
-  }
+    },
+  });
+
+  console.log('[DEBUG] Raw userPrograms from DB:', JSON.stringify(userPrograms, null, 2));
+
+  const result = await Promise.all(
+    userPrograms.map(async (up) => {
+      let status = up.status;
+      console.log('[DEBUG] Initial status:', status);
+      console.log('[DEBUG] Payment status:', up.paymentStatus);
+
+      if (up.paymentStatus === 'SUCCESS') {
+        status = 'STANDARD';
+        console.log('[DEBUG] Updated status to STANDARD due to payment success.');
+
+        const courseIds = await this.prisma.course.findMany({
+          where: { programId: up.programId },
+          select: { id: true },
+        }).then(courses => courses.map(course => course.id));
+
+        console.log('[DEBUG] Course IDs for program:', courseIds);
+
+        const hasCertificate = await this.prisma.certificate.findFirst({
+          where: {
+            userId: user.id,
+            courseId: { in: courseIds },
+          },
+        });
+
+        console.log('[DEBUG] Certificate found:', !!hasCertificate);
+
+        if (hasCertificate) {
+          status = 'CERTIFIED';
+          console.log('[DEBUG] Updated status to CERTIFIED due to certificate.');
+        }
+      }
+
+      return {
+        status,
+        program: up.program,
+      };
+    })
+  );
+
+  return result;
+}
 
   //-------------------------------------Update Program------------------------------------
   public async updateProgram(id: string, data: UpdateProgramDto) {
