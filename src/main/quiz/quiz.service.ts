@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateQuizDto, SubmitAnswerDto } from './quiz.dto';
+import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto } from './quiz.dto';
 import { IdDto } from 'src/common/id.dto';
 import { ApiResponse } from 'src/utils/sendResponse';
 import { Quiz, QuizSubmission, UserRole } from '@prisma/client';
@@ -338,4 +338,68 @@ export class QuizService {
     });
     return null;
   }
+
+  public async updateQuiz(dto: UpdateQuizDto, user: TUser) {
+    const { id, quizzesData } = dto;
+  
+    if (!quizzesData || !quizzesData.length) {
+      throw new HttpException('No quiz data provided', HttpStatus.BAD_REQUEST);
+    }
+  
+    const quizToUpdate = quizzesData[0];
+  
+    const existingQuiz = await this.prisma.quiz.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        quizInstance: {
+          select: {
+            content: {
+              select: {
+                module: {
+                  select: {
+                    course: {
+                      select: {
+                        program: {
+                          select: {
+                            publishedFor: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  
+    if (!existingQuiz) {
+      throw new HttpException('Quiz not found', HttpStatus.NOT_FOUND);
+    }
+  
+    if (user.userType === UserRole.ADMIN) {
+      await adminAccessControl(
+        this.prisma,
+        user,
+        existingQuiz.quizInstance.content.module.course.program.publishedFor,
+      );
+    }
+  
+    const updatedQuiz = await this.prisma.quiz.update({
+      where: { id },
+      data: {
+        ...(quizToUpdate.question && { question: quizToUpdate.question }),
+        ...(quizToUpdate.options && { options: quizToUpdate.options }),
+        ...(quizToUpdate.correctAnswer && {
+          correctAnswer: quizToUpdate.correctAnswer,
+        }),
+      },
+    });
+  
+    return updatedQuiz;
+  }
+  
 }

@@ -61,3 +61,4 @@ export class SubmitAnswerDto {
   @IsUUID('4', { message: 'Content ID must be a valid UUID (version 4).' })
   contentId: string;
 }
+
