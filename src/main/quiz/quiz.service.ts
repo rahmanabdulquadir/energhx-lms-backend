@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto } from './quiz.dto';
+import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto, UpdateSingleQuizDto } from './quiz.dto';
 import { IdDto } from 'src/common/id.dto';
 import { ApiResponse } from 'src/utils/sendResponse';
 import { Quiz, QuizSubmission, UserRole } from '@prisma/client';
@@ -339,15 +339,13 @@ export class QuizService {
     return null;
   }
 
-  public async updateQuiz(dto: UpdateQuizDto, user: TUser) {
-    const { id, quizzesData } = dto;
-  
-    if (!quizzesData || !quizzesData.length) {
+  public async updateQuiz(id: string, dto: UpdateSingleQuizDto, user: TUser) {
+    // Validate that update data is present
+    if (!dto || Object.keys(dto).length === 0) {
       throw new HttpException('No quiz data provided', HttpStatus.BAD_REQUEST);
     }
   
-    const quizToUpdate = quizzesData[0];
-  
+    // Fetch the existing quiz to check existence and permission
     const existingQuiz = await this.prisma.quiz.findUnique({
       where: { id },
       select: {
@@ -380,6 +378,7 @@ export class QuizService {
       throw new HttpException('Quiz not found', HttpStatus.NOT_FOUND);
     }
   
+    // Admin access control check if applicable
     if (user.userType === UserRole.ADMIN) {
       await adminAccessControl(
         this.prisma,
@@ -388,18 +387,16 @@ export class QuizService {
       );
     }
   
+    // Update only provided fields
     const updatedQuiz = await this.prisma.quiz.update({
       where: { id },
       data: {
-        ...(quizToUpdate.question && { question: quizToUpdate.question }),
-        ...(quizToUpdate.options && { options: quizToUpdate.options }),
-        ...(quizToUpdate.correctAnswer && {
-          correctAnswer: quizToUpdate.correctAnswer,
-        }),
+        ...(dto.question !== undefined && { question: dto.question }),
+        ...(dto.options !== undefined && { options: dto.options }),
+        ...(dto.correctAnswer !== undefined && { correctAnswer: dto.correctAnswer }),
       },
     });
   
     return updatedQuiz;
   }
-  
 }

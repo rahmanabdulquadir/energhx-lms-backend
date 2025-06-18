@@ -8,6 +8,7 @@ import {
   ValidateNested,
   IsNumber,
   IsString,
+  IsOptional,
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
@@ -39,9 +40,29 @@ export class CreateQuizDto {
   quizzesData: SingleQuizDto[];
 }
 
-export class UpdateQuizDto extends PartialType(CreateQuizDto) {
+export class UpdateSingleQuizDto {
+  @IsOptional()
+  @IsString()
+  question?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  options?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  correctAnswer?: number;
+}
+
+export class UpdateQuizDto {
   @IsUUID('4', { message: 'ID must be a valid UUID (version 4).' })
   id: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateSingleQuizDto)
+  quizData?: UpdateSingleQuizDto;
 }
 
 export class AnswerSheetItem {

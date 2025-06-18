@@ -12,7 +12,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
-import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto } from './quiz.dto';
+import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto, UpdateSingleQuizDto } from './quiz.dto';
 import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { UserRole } from '@prisma/client';
@@ -91,14 +91,16 @@ export class QuizController {
     });
   }
 
-  @Patch()
+
+  @Patch(':id')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   async updateQuiz(
-    @Body() updateQuizDto: UpdateQuizDto,
+    @Param('id') id: string,
+    @Body() updateQuizDto: UpdateSingleQuizDto, // note: direct quiz fields here, no nested array
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const result = await this.quizService.updateQuiz(updateQuizDto, req.user);
+    const result = await this.quizService.updateQuiz(id, updateQuizDto, req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -106,6 +108,8 @@ export class QuizController {
       data: result,
     });
   }
+  
+  
 
   @Delete('delete-quiz/:id')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
