@@ -9,9 +9,10 @@ import {
   Req,
   HttpStatus,
   Res,
+  Patch,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
-import { CreateQuizDto, SubmitAnswerDto } from './quiz.dto';
+import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto } from './quiz.dto';
 import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { UserRole } from '@prisma/client';
@@ -87,6 +88,22 @@ export class QuizController {
       success: true,
       message: `Quiz submitted successfully. Score: ${score}/${total}`,
       data: { quizSubmission, score, total },
+    });
+  }
+
+  @Patch()
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+  async updateQuiz(
+    @Body() updateQuizDto: UpdateQuizDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const result = await this.quizService.updateQuiz(updateQuizDto, req.user);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Quiz updated successfully',
+      data: result,
     });
   }
 
