@@ -53,7 +53,7 @@ export class DeveloperController {
         })),
       });
     }
-    console.log(files);
+    // console.log(files);
     if (files?.length) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -73,7 +73,7 @@ export class DeveloperController {
       }
     }
 
-    console.log(developerProfileDto);
+    // console.log(developerProfileDto);
     const result = await this.developerService.createDeveloper(
       req.params.id,
       developerProfileDto,

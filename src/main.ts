@@ -10,15 +10,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ✅ Attach raw body only for Stripe webhook requests
-  app.use(
-    express.json({
-      verify: (req: any, res, buf) => {
-        if (req.headers['stripe-signature']) {
-          req.rawBody = buf;
-        }
-      },
-    }),
-  );
+  // app.use(
+  //   express.json({
+  //     verify: (req: any, res, buf) => {
+  //       if (req.headers['stripe-signature']) {
+  //         req.rawBody = buf;
+  //       }
+  //     },
+  //   }),
+  // );
+
+  app.use('/payment/webhook', express.raw({ type: 'application/json' }));
+ 
 
   app.use(cookieParser());
   app.enableCors();

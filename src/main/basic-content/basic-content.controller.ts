@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpException,
   HttpStatus,
   Param,
@@ -85,6 +86,19 @@ export class BasicContentController {
       data: result,
     });
   }
+
+
+  @Get('all')
+@UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+public async getAllBasicContent(@Res() res: Response) {
+  const result = await this.basicContentService.getAllBasicContent();
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: 'All basic content retrieved successfully',
+    data: result,
+  });
+}
 
   // Update Basic Content
   @Patch(':id')

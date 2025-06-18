@@ -112,7 +112,7 @@ export class ProgramController {
   @Get('my-programs/all')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
   async getMyPrograms(@Res() res: Response, @Req() req: Request) {
-    console.log(req.user);
+    // console.log(req.user);
     const result = await this.programService.getMyPrograms(req.user);
     sendResponse(res, {
       statusCode: HttpStatus.OK,
@@ -154,7 +154,7 @@ export class ProgramController {
       }
     }
     await validate(updateProgramDto);
-    console.log('updateProgramDto ==> ', updateProgramDto);
+    // console.log('updateProgramDto ==> ', updateProgramDto);
 
     const result = await this.programService.updateProgram(
       param.id,

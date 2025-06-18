@@ -133,13 +133,14 @@ public async getMyPrograms(user: TUser) {
         }
       }
 
+      console.log('[DEBUG] DB status:', up.status, '| Payment:', up.paymentStatus);
+      console.log('[DEBUG] Final resolved status:', status);
       return {
         status,
         program: up.program,
       };
     })
   );
-
   return result;
 }
 
@@ -152,9 +153,10 @@ public async getMyPrograms(user: TUser) {
     const result = await this.prisma.program.update({
       where: { id },
       data,
-    });
+    });   
     return result;
   }
+
 
   //--------------------------------Delete Program--------------------------------------
 public async deleteProgram(id: string) {

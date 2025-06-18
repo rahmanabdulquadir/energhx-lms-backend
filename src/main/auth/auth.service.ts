@@ -112,7 +112,7 @@ export class AuthService {
   }
 
   public async resetPassword(payload: { newPassword: string }, token: string) {
-    console.log(payload, token);
+    // console.log(payload, token);
     // 1. Decode token
     const decoded: any = this.jwtService.verify(token, {
       secret: this.configService.get('JWT_SECRET'),

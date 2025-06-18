@@ -32,7 +32,7 @@ export class AuthGuard implements CanActivate {
         where: { email: email },
       });
 
-      console.log(user)
+      // console.log(user)
 
       if (!user) {
         throw new HttpException('User not found!', 404);

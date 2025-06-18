@@ -38,6 +38,7 @@ export class PaymentController {
     @Headers('stripe-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
   ) {
+    console.log('⚡️ Webhook HIT!');
     return this.stripeService.handleWebhook(req);
   }
 
@@ -45,4 +46,4 @@ export class PaymentController {
   async getPaymentDetails(@Param('sessionId') sessionId: string) {
     return this.stripeService.getCheckoutSessionDetails(sessionId);
   }
-}
+} 

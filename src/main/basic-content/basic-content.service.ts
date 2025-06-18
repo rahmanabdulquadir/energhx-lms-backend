@@ -33,6 +33,29 @@ export class BasicContentService {
     return basicContent;
   }
 
+
+  public async getAllBasicContent() {
+    const allContent = await this.prisma.basicContent.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        course: {
+          select: {
+            title: true,
+            program: {
+              select: {
+                title: true,
+                publishedFor: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  
+    return allContent;
+  }
   //---------------------------------------Update Basic Content--------------------------------------------
   public async updateBasicContent(
     id: string,
