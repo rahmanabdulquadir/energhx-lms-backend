@@ -81,10 +81,18 @@ export class AdminService {
   }
 
   public async getASingleAdmin(id: string) {
-    const existingAdmin = await this.prisma.admin.findUnique({ where: { id } });
-    if (!existingAdmin)
+    const admin = await this.prisma.admin.findUnique({
+      where: { id },
+      include: {
+        user: true, // this will include the full linked user details
+      },
+    });
+  
+    if (!admin) {
       throw new HttpException('Admin not found!', HttpStatus.NOT_FOUND);
-    return existingAdmin;
+    }
+  
+    return admin;
   }
 
   public async getAllAdminsFromDB() {
