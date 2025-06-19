@@ -252,4 +252,37 @@ export class StripeService {
   async getInvoice(invoiceId: string): Promise<Stripe.Invoice> {
     return await this.stripe.invoices.retrieve(invoiceId);
   }
+
+  async getAllPaymentsFromDB() {
+    const payments = await this.prisma.userProgram.findMany({
+      where: {
+        paymentStatus: {
+          not: undefined
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            email: true,
+          },
+        },
+        program: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+
+        
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+  
+    return payments;
+  }
+  
 }

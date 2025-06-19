@@ -147,9 +147,11 @@ model UserProgram {
   status          UserProgramStatus @default(BASIC)
 
   userId    String
-  user      User    @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   programId String
-  program   Program @relation(fields: [programId], references: [id])
+  program   Program   @relation(fields: [programId], references: [id])
+  createdAt DateTime? @default(now()) // ✅ add this
+  updatedAt DateTime? @updatedAt
 
   @@unique([userId, programId])
 }
