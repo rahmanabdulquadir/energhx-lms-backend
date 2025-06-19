@@ -79,12 +79,19 @@ export class StripeService {
 
   async handleWebhook(req: RawBodyRequest<Request>) {
     const signature = req.headers['stripe-signature'] as string;
-    const rawBody = req.rawBody;
+    const rawBody = req.body as Buffer;
   
     console.log('📥 Received webhook at Stripe endpoint');
+  
     if (!rawBody) {
       console.error('❌ No rawBody found in request');
       throw new BadRequestException('No webhook payload was provided.');
+    }
+  
+    const endpointSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!endpointSecret) {
+      console.error('❌ Missing STRIPE_WEBHOOK_SECRET in environment variables');
+      throw new BadRequestException('Webhook secret not configured');
     }
   
     let event: Stripe.Event;
@@ -92,14 +99,15 @@ export class StripeService {
       event = this.stripe.webhooks.constructEvent(
         rawBody,
         signature,
-        'whsec_0a391bbb66708578eb637e4d817f4908dcc55e503ce55a7aa6c98b11e2c09463',
+        endpointSecret,
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Stripe signature verification failed:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
     }
   
     console.log('✅ Stripe event received:', event.type);
+  
     const data = event.data.object as Stripe.PaymentIntent;
     const metadata = data.metadata;
   
@@ -169,23 +177,24 @@ export class StripeService {
   
     return { received: true, type: event.type };
   }
+  
 
-  // async constructWebhookEvent(payload: Buffer, signature: string) {
-  //   const endpointSecret = this.configService.get<string>(
-  //     'STRIPE_WEBHOOK_SECRET',
-  //   );
-  //   if (!endpointSecret) {
-  //     throw new Error(
-  //       'STRIPE_WEBHOOK_SECRET is not defined in environment variables',
-  //     );
-  //   }
+  async constructWebhookEvent(payload: Buffer, signature: string) {
+    const endpointSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
+    if (!endpointSecret) {
+      throw new Error(
+        'STRIPE_WEBHOOK_SECRET is not defined in environment variables',
+      );
+    }
 
-  //   return this.stripe.webhooks.constructEvent(
-  //     payload,
-  //     signature,
-  //     endpointSecret,
-  //   );
-  // }
+    return this.stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      endpointSecret,
+    );
+  }
 
   async getPaymentIntent(paymentIntentId: string): Promise<
     Stripe.PaymentIntent & {
