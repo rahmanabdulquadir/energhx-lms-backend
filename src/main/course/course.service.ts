@@ -40,9 +40,20 @@ export class CourseService {
       },
     });
     if (!course) throw new HttpException('Course Not Found', 404);
+
     if (user.userType === UserRole.ADMIN)
       await adminAccessControl(this.prisma, user, course.program.publishedFor);
-    if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
+    if (user.userType === UserRole.SUPER_ADMIN ) {
+      const result = await this.prisma.course.findUnique({
+        where: { id },
+        include: {
+          basicContents: true,
+          modules: true,
+        },
+      });
+      return result;
+    }
+    if (user.userType !== 'ADMIN' ) {
       if (course.program.publishedFor !== user.userType)
         throw new HttpException(
           'This course is not for you to view',
@@ -56,7 +67,8 @@ export class CourseService {
           },
         },
       });
-      console.log(userProgram)
+      console.log(userProgram);
+
       if (
         !userProgram ||
         (userProgram?.status !== UserProgramStatus.STANDARD &&
