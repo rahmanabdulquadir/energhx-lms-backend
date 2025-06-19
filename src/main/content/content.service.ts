@@ -39,6 +39,48 @@ export class ContentService {
     return Content;
   }
 
+  // Get single content
+public async getSingleContent(id: string, user: TUser) {
+  const content = await this.prisma.content.findUnique({
+    where: { id },
+    include: {
+      module: {
+        select: {
+          course: {
+            select: {
+              program: {
+                select: {
+                  publishedFor: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      quiz: {
+        include: {
+          quizzes: true,
+        },
+      },
+    },
+  });
+
+  if (!content) {
+    throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+  }
+
+  if (user.userType === UserRole.ADMIN) {
+    await adminAccessControl(
+      this.prisma,
+      user,
+      content.module.course.program.publishedFor,
+    );
+  }
+
+  return content;
+}
+
+
   //---------------------------------------Update Content--------------------------------------------
   public async updateContent(id: string, data: UpdateContentDto, user: TUser) {
     const content = await this.prisma.content.findUnique({

@@ -93,6 +93,24 @@ export class ContentController {
     });
   }
 
+  // Get single content
+  @Get(':id')
+@UseGuards(AuthGuard)
+public async getSingleContent(
+  @Req() req: Request,
+  @Res() res: Response,
+  @Param() param: IdDto,
+) {
+  const result = await this.contentService.getSingleContent(param.id, req.user);
+
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: 'Content retrieved successfully',
+    data: result,
+  });
+}
+
   // Update Content
   @Patch(':id')
   @UploadInterceptor('file')
