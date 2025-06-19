@@ -7,12 +7,16 @@ import {
   Post,
   RawBodyRequest,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { StripeService } from '../stripe/stripe.service';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { CreateCheckoutDto } from './payment.dto';
 import { Request } from 'express';
+import { RoleGuardWith } from 'src/utils/RoleGuardWith';
+import { UserRole } from '@prisma/client';
+import { Response } from 'express';
 
 @Controller('payment')
 export class PaymentController {
@@ -45,5 +49,18 @@ export class PaymentController {
   @Get('details/:sessionId')
   async getPaymentDetails(@Param('sessionId') sessionId: string) {
     return this.stripeService.getCheckoutSessionDetails(sessionId);
+  }
+
+  @Get('all')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+  async getAllPayments(@Res() res: Response) {
+    const result = await this.stripeService.getAllPaymentsFromDB();
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: 'All payment records fetched successfully',
+      data: result,
+    });
   }
 } 
