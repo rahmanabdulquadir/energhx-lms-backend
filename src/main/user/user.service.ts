@@ -366,16 +366,29 @@ export class UserService {
     const prevIndex = contentIds.findIndex(
       (content) => content === existingProgress?.contentId,
     );
-    if (existingProgress && index - 1 > prevIndex)
+    if (existingProgress && index - 1 > prevIndex) {
       throw new HttpException(
-        'This content is locked. Please complete previous contents first.',
-        403,
+        {
+          message:
+            'This content is locked. Please complete previous contents first.',
+          statusCode: 403,
+          errorType: 'LOCKED_CONTENT',
+          requiredContentId: contentIds[prevIndex + 1] ?? null,
+        },
+        HttpStatus.FORBIDDEN,
       );
+    }
     if (existingProgress && index <= prevIndex)
       return {
         watchedContents: contentIds.slice(0, prevIndex + 1),
         percentage: existingProgress.percentage,
       };
+
+    if (existingProgress && index - 1 > prevIndex)
+      throw new HttpException(
+        'This content is locked. Please complete previous contents first.',
+        403,
+      );
 
     const percentage = Math.round(((index + 1) / contentIds.length) * 100);
     await this.prisma.progress.upsert({
