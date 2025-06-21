@@ -31,53 +31,77 @@ export class ModuleService {
   }
 
   // ------------------------------------Get Single Module-------------------------------------
-  public async getSingleModule(id: string, user: TUser) {
-    const module = await this.prisma.module.findUnique({
-      where: { id },
-      select: {
-        course: {
-          select: {
-            program: {
-              select: {
-                publishedFor: true,
-              },
+public async getSingleModule(id: string, user: TUser) {
+  // Step 1: Validate access & get course ID
+  const module = await this.prisma.module.findUnique({
+    where: { id },
+    select: {
+      course: {
+        select: {
+          program: {
+            select: {
+              publishedFor: true,
             },
-            programId: true,
           },
+          programId: true,
+          id: true, // needed for courseId
         },
       },
-    });
-    if (!module) throw new HttpException('Module Not Found', 404);
+    },
+  });
 
-    if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
-      if (module.course.program.publishedFor !== user.userType)
-        throw new HttpException(
-          'This course is not for you to view',
-          HttpStatus.BAD_REQUEST,
-        );
-      const paymentStatus = await this.prisma.userProgram.findUnique({
-        where: {
-          userId_programId: {
-            userId: user.id,
-            programId: module.course.programId,
-          },
-        },
-      });
-      if (!paymentStatus)
-        throw new HttpException(
-          'You need to pay first to view the course',
-          HttpStatus.BAD_REQUEST,
-        );
+  if (!module) throw new HttpException('Module Not Found', 404);
+
+  if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
+    if (module.course.program.publishedFor !== user.userType) {
+      throw new HttpException(
+        'This course is not for you to view',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    const result = await this.prisma.module.findUnique({
-      where: { id },
-      include: {
-        contents: true,
+    const paymentStatus = await this.prisma.userProgram.findUnique({
+      where: {
+        userId_programId: {
+          userId: user.id,
+          programId: module.course.programId,
+        },
       },
     });
-    return result;
+
+    if (!paymentStatus) {
+      throw new HttpException(
+        'You need to pay first to view the course',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
+
+  // Step 2: Retrieve module with contents
+  const result = await this.prisma.module.findUnique({
+    where: { id },
+    include: {
+      contents: true,
+    },
+  });
+
+  if (!result) {
+    throw new HttpException('Module Not Found', 404);
+  }
+
+  // Step 3: Inject courseId into each content
+  const contentsWithCourseId = result.contents.map((content) => ({
+    ...content,
+    courseId: module.course.id,
+  }));
+
+  return {
+    ...result,
+    courseId: module.course.id,
+    contents: contentsWithCourseId,
+  };
+}
+
 
   //----------------------------------Get All Modules---------------------------------------
   public async getAllModules(courseId: string) {
