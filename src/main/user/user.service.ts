@@ -20,69 +20,69 @@ export class UserService {
   ) {}
 
   // ------------------------------- Get Me -------------------------------
- public async getMe(user: TUser) {
-  if (
-    user.userType !== "SUPER_ADMIN" &&
-    user.userType !== 'DEVELOPER' &&
-    user.userType !== 'SERVER' &&
-    user.userType !== 'ADMIN'
-  ) {
-    throw new HttpException(
-      'Invalid User role provided',
-      HttpStatus.BAD_REQUEST,
-    );
-  }
+  public async getMe(user: TUser) {
+    if (
+      user.userType !== 'SUPER_ADMIN' &&
+      user.userType !== 'DEVELOPER' &&
+      user.userType !== 'SERVER' &&
+      user.userType !== 'ADMIN'
+    ) {
+      throw new HttpException(
+        'Invalid User role provided',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
-  if (user.userType === 'DEVELOPER') {
-    const developer = await this.prisma.developer.findUniqueOrThrow({
-      where: { userId: user.id, status: 'ACTIVE' },
-      include: { user: true },
+    if (user.userType === 'DEVELOPER') {
+      const developer = await this.prisma.developer.findUniqueOrThrow({
+        where: { userId: user.id, status: 'ACTIVE' },
+        include: { user: true },
+      });
+
+      return {
+        userId: developer.user.id,
+        status: developer.status,
+        user: developer.user,
+      };
+    }
+
+    if (user.userType === 'SERVER') {
+      const server = await this.prisma.server.findUniqueOrThrow({
+        where: { userId: user.id, status: 'ACTIVE' },
+        include: { user: true },
+      });
+
+      return {
+        userId: server.user.id,
+        status: server.status,
+        user: server.user,
+      };
+    }
+
+    if (user.userType === 'ADMIN') {
+      const admin = await this.prisma.admin.findUniqueOrThrow({
+        where: { userId: user.id, status: 'ACTIVE' },
+        include: { user: true },
+      });
+
+      return {
+        userId: admin.user.id,
+        status: admin.status,
+        user: admin.user,
+      };
+    }
+
+    // SUPER_ADMIN fallback
+    const superAdmin = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id, status: 'ACTIVE' },
     });
 
     return {
-      userId: developer.user.id,
-      status: developer.status,
-      user: developer.user,
+      userId: superAdmin.id,
+      status: superAdmin.status,
+      user: superAdmin,
     };
   }
-
-  if (user.userType === 'SERVER') {
-    const server = await this.prisma.server.findUniqueOrThrow({
-      where: { userId: user.id, status: 'ACTIVE' },
-      include: { user: true },
-    });
-
-    return {
-      userId: server.user.id,
-      status: server.status,
-      user: server.user,
-    };
-  }
-
-  if (user.userType === 'ADMIN') {
-    const admin = await this.prisma.admin.findUniqueOrThrow({
-      where: { userId: user.id, status: 'ACTIVE' },
-      include: { user: true },
-    });
-
-    return {
-      userId: admin.user.id,
-      status: admin.status,
-      user: admin.user,
-    };
-  }
-
-  // SUPER_ADMIN fallback
-  const superAdmin = await this.prisma.user.findUniqueOrThrow({
-    where: { id: user.id, status: 'ACTIVE' },
-  });
-
-  return {
-    userId: superAdmin.id,
-    status: superAdmin.status,
-    user: superAdmin,
-  };
-}
 
   // ------------------------------- Get All Users -------------------------------
   public async getAllUsers() {
@@ -371,8 +371,11 @@ export class UserService {
         'This content is locked. Please complete previous contents first.',
         403,
       );
-    if (existingProgress && index - 1 !== prevIndex)
-      throw new HttpException('Already watched!', 403);
+    if (existingProgress && index <= prevIndex)
+      return {
+        watchedContents: contentIds.slice(0, prevIndex + 1),
+        percentage: existingProgress.percentage,
+      };
 
     const percentage = Math.round(((index + 1) / contentIds.length) * 100);
     await this.prisma.progress.upsert({
@@ -388,7 +391,7 @@ export class UserService {
         select: { id: true },
       });
       const programCourseIds = programCourses.map((course) => course.id);
-    
+
       // Get all user's progress for those courses
       const userProgresses = await this.prisma.progress.findMany({
         where: {
@@ -400,12 +403,13 @@ export class UserService {
           percentage: true,
         },
       });
-    
+
       // Check if all courses are 100% completed
       const allCompleted = programCourseIds.every((courseId) =>
         userProgresses.some(
-          (progress) => progress.courseId === courseId && progress.percentage === 100,
-        )
+          (progress) =>
+            progress.courseId === courseId && progress.percentage === 100,
+        ),
       );
       if (allCompleted) {
         await this.prisma.userProgram.update({
@@ -421,7 +425,7 @@ export class UserService {
         });
       }
     }
-    
+
     const watchedContents = contentIds.slice(0, index + 1);
     return {
       watchedContents,
