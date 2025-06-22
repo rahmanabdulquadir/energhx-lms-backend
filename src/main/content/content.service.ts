@@ -39,6 +39,33 @@ export class ContentService {
     return Content;
   }
 
+    // ------------------------------------ Get All Content ------------------------------------
+    public async getAllContent() {
+      const contents = await this.prisma.content.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          module: {
+            select: {
+              title: true,
+              course: {
+                select: {
+                  title: true,
+                  program: {
+                    select: {
+                      title: true,
+                      publishedFor: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+  
+      return contents;
+    }
+
   // Get single content
 public async getSingleContent(id: string, user: TUser) {
   const content = await this.prisma.content.findUnique({
