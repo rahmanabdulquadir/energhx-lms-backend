@@ -146,46 +146,43 @@ public async getSingleContent(id: string, user: TUser) {
 
   //---------------------------------------Delete Content--------------------------------------------
   public async deleteContent(id: string, user: TUser) {
-    return this.prisma.$transaction(async (tx) => {
-      const content = await tx.content.findUnique({
-        where: { id },
-        include: {
-          module: {
-            include: {
-              course: {
-                select: {
-                  id: true,
-                  program: {
-                    select: {
-                      publishedFor: true,
-                    },
+    // Pre-check outside transaction for better performance
+    const content = await this.prisma.content.findUnique({
+      where: { id },
+      include: {
+        module: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                program: {
+                  select: {
+                    publishedFor: true,
                   },
                 },
               },
-              contents: {
-                orderBy: { createdAt: 'asc' },
-                select: { id: true },
-              },
-            },
-          },
-          quiz: {
-            include: {
-              quizzes: true,
-              quizSubmissions: true,
             },
           },
         },
-      });
-
-      if (!content)
-        throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
-      if (user.userType === UserRole.ADMIN)
-        await adminAccessControl(
-          this.prisma,
-          user,
-          content.module.course.program.publishedFor,
-        );
-      const courseId = content.module.course.id;
+      },
+    });
+  
+    if (!content)
+      throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+  
+    if (user.userType === UserRole.ADMIN) {
+      await adminAccessControl(
+        this.prisma,
+        user,
+        content.module.course.program.publishedFor,
+      );
+    }
+  
+    const courseId = content.module.course.id;
+  
+    // Now run the rest inside a transaction with increased timeout
+    return this.prisma.$transaction(async (tx) => {
+      // Get all modules + content
       const modules = await tx.module.findMany({
         where: { courseId },
         include: {
@@ -195,52 +192,68 @@ public async getSingleContent(id: string, user: TUser) {
           },
         },
       });
-
+  
       const orderedContentIds = modules.flatMap((mod) =>
         mod.contents.map((c) => c.id),
       );
-
       const deletedIndex = orderedContentIds.findIndex((cid) => cid === id);
       const previousContentId = orderedContentIds[deletedIndex - 1] ?? null;
-
+  
+      // Update or delete user progress
       const progressRecords = await tx.progress.findMany({
         where: { courseId },
       });
-
-      for (const progress of progressRecords) {
+  
+      const progressOps = progressRecords.map((progress) => {
         if (progress.contentId === id) {
           if (previousContentId) {
-            await tx.progress.update({
+            return tx.progress.update({
               where: { userId_courseId: { userId: progress.userId, courseId } },
               data: { contentId: previousContentId },
             });
           } else {
-            await tx.progress.delete({
+            return tx.progress.delete({
               where: { userId_courseId: { userId: progress.userId, courseId } },
             });
           }
         }
-      }
-
-      if (content.quiz) {
+        return null;
+      });
+  
+      await Promise.all(progressOps.filter(Boolean)); // filter out nulls
+  
+      // Delete quizzes if they exist
+      const quiz = await tx.quizInstance.findUnique({
+        where: { id: id }, // you might want to refactor how you fetch this ID
+        include: {
+          quizzes: true,
+          quizSubmissions: true,
+        },
+      });
+  
+      if (quiz) {
         await tx.quizSubmission.deleteMany({
-          where: { quizInstanceId: content.quiz.id },
+          where: { quizInstanceId: quiz.id },
         });
-
+  
         await tx.quiz.deleteMany({
-          where: { quizInstanceId: content.quiz.id },
+          where: { quizInstanceId: quiz.id },
         });
-
+  
         await tx.quizInstance.delete({
-          where: { id: content.quiz.id },
+          where: { id: quiz.id },
         });
       }
-
+  
+      // Finally, delete the content
       await tx.content.delete({
         where: { id },
       });
-
+  
       return null;
+    }, {
+      maxWait: 10000,  // max time to wait to get a connection (10 seconds)
+      timeout: 15000,  // max time for transaction to complete (15 seconds)
     });
   }
 }
