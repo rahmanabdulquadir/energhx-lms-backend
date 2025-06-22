@@ -117,4 +117,71 @@ export class AdminService {
     await tx.user.delete({ where: { id: admin.userId } });
   });
 }
+
+public async updateAdmin(id: string, dto: Partial<CreateAdminDto>) {
+  const admin = await this.prisma.admin.findUnique({
+    where: { id },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!admin) {
+    throw new HttpException('Admin not found', HttpStatus.NOT_FOUND);
+  }
+
+  // Optional: Validate state-country relation if any of them is being updated
+  if (dto.stateId || dto.countryId) {
+    const state = await this.prisma.state.findUnique({
+      where: { id: dto.stateId ?? admin.user.stateId },
+    });
+
+    if (!state) {
+      throw new HttpException('Invalid stateId', HttpStatus.BAD_REQUEST);
+    }
+
+    if ((dto.countryId ?? admin.user.countryId) !== state.countryId) {
+      throw new HttpException(
+        'State does not belong to the provided country',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  return await this.prisma.$transaction(async (tx) => {
+    // Update the user info if provided
+    await tx.user.update({
+      where: { id: admin.userId },
+      data: {
+        firstName: dto.firstName ?? undefined,
+        lastName: dto.lastName ?? undefined,
+        otherName: dto.otherName ?? undefined,
+        email: dto.email ?? undefined,
+        sex: dto.sex ?? undefined,
+        companyName: dto.companyName ?? undefined,
+        profile_photo: dto.profile_photo ?? undefined,
+        streetNumber: dto.streetNumber ?? undefined,
+        street: dto.street ?? undefined,
+        postalCode: dto.postalCode ?? undefined,
+        city: dto.city ?? undefined,
+        countryId: dto.countryId ?? undefined,
+        stateId: dto.stateId ?? undefined,
+      },
+    });
+
+    // Update the admin-specific fields
+    const updatedAdmin = await tx.admin.update({
+      where: { id },
+      data: {
+        email: dto.email ?? undefined,
+        canAccess: dto.canAccess ?? undefined,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return updatedAdmin;
+  });
+}
 }
