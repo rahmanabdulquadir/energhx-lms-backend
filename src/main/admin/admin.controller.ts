@@ -5,6 +5,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -98,6 +99,52 @@ export class AdminController {
       data: result,
     });
   }
+
+  @Patch('/:id')
+  @UploadInterceptor('file')
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
+  async updateAdmin(
+    @Param('id') id: string,
+    @Body('text') text: string,
+    @UploadedFile() file: any,
+    @Res() res: Response,
+  ) {
+    const parsed = JSON.parse(text);
+    const updateAdminDto = plainToInstance(CreateAdminDto, parsed); // using CreateAdminDto since it's reused
+
+    if (file) {
+      const uploaded = await this.lib.uploadToCloudinary({
+        fileName: file.filename,
+        path: file.path,
+      });
+      if (uploaded?.secure_url) {
+        updateAdminDto.profile_photo = uploaded.secure_url;
+      }
+    }
+
+    const errors = await validate(updateAdminDto, { skipMissingProperties: true });
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: HttpStatus.BAD_REQUEST,
+        message:
+          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+        errorDetails: errors.map((err) => ({
+          property: err.property,
+          constraints: err.constraints,
+        })),
+      });
+    }
+
+    const result = await this.adminService.updateAdmin(id, updateAdminDto);
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'Admin updated successfully!',
+      data: result,
+    });
+  }
+
 
   @Delete('/:id')
 @UseGuards(AuthGuard, RoleGuardWith([UserRole.SUPER_ADMIN]))
