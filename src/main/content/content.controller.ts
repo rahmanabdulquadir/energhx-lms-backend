@@ -93,6 +93,18 @@ export class ContentController {
     });
   }
 
+  @Get()
+  @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+  public async getAllContent(@Req() req: Request, @Res() res: Response) {
+    const result = await this.contentService.getAllContent();
+    sendResponse(res, {
+      statusCode: HttpStatus.OK,
+      success: true,
+      message: 'All content retrieved successfully',
+      data: result,
+    });
+  }
+
   // Get single content
   @Get(':id')
 @UseGuards(AuthGuard)
