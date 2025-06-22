@@ -96,9 +96,16 @@ export class AdminService {
   }
 
   public async getAllAdminsFromDB() {
-    const existingAdmin = await this.prisma.admin.findMany();
-    if (!existingAdmin || existingAdmin.length == 0)
+    const existingAdmin = await this.prisma.admin.findMany({
+      include: {
+        user: true, // Include all user details
+      },
+    });
+  
+    if (!existingAdmin || existingAdmin.length === 0) {
       throw new HttpException('No Admin found!', HttpStatus.NOT_FOUND);
+    }
+  
     return existingAdmin;
   }
 
@@ -108,6 +115,7 @@ export class AdminService {
   if (!admin) {
     throw new HttpException('Admin not found', HttpStatus.NOT_FOUND);
   }
+  132
 
   await this.prisma.$transaction(async (tx) => {
     // Delete the admin record
