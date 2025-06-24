@@ -34,4 +34,12 @@ export class GradingController {
   ) {
     return this.gradingService.getCertificate(userId, courseId);
   }
+
+  @Get(':courseId/:userId/results')
+  getUserResults(
+    @Param('courseId') courseId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.gradingService.getUserResultsForCourse(userId, courseId);
+  }
 }

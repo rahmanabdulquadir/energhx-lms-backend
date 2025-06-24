@@ -26,8 +26,13 @@ export class GradingService {
     });
   }
 
-  async getCourseAveragePercentage(userId: string, courseId: string): Promise<number> {
-    console.log(`📘 Fetching quiz submissions for userId=${userId}, courseId=${courseId}`);
+  async getCourseAveragePercentage(
+    userId: string,
+    courseId: string,
+  ): Promise<number> {
+    console.log(
+      `📘 Fetching quiz submissions for userId=${userId}, courseId=${courseId}`,
+    );
 
     const submissions = await this.prisma.quizSubmission.findMany({
       where: {
@@ -65,7 +70,9 @@ export class GradingService {
     const percentages = submissions.map((sub, index) => {
       const total = sub.quizInstance.totalMark ?? 0;
       const score = total > 0 ? (sub.correctAnswers / total) * 100 : 0;
-      console.log(`📊 Submission ${index + 1}: correct=${sub.correctAnswers}, total=${total}, score=${score.toFixed(2)}%`);
+      console.log(
+        `📊 Submission ${index + 1}: correct=${sub.correctAnswers}, total=${total}, score=${score.toFixed(2)}%`,
+      );
       return score;
     });
 
@@ -76,7 +83,9 @@ export class GradingService {
   }
 
   async issueCertificate(userId: string, courseId: string) {
-    console.log(`🏅 Attempting to issue certificate for userId=${userId}, courseId=${courseId}`);
+    console.log(
+      `🏅 Attempting to issue certificate for userId=${userId}, courseId=${courseId}`,
+    );
 
     const average = await this.getCourseAveragePercentage(userId, courseId);
 
@@ -113,41 +122,41 @@ export class GradingService {
   }
 
   async getUserResultsForCourse(userId: string, courseId: string) {
-  const submissions = await this.prisma.quizSubmission.findMany({
-    where: {
-      userId,
-      quizInstance: {
-        content: {
-          module: {
-            courseId,
-          },
-        },
-      },
-    },
-    include: {
-      quizInstance: {
-        include: {
+    const submissions = await this.prisma.quizSubmission.findMany({
+      where: {
+        userId,
+        quizInstance: {
           content: {
-            select: {
-              title: true,
-              contentType: true,
+            module: {
+              courseId,
             },
           },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
+      include: {
+        quizInstance: {
+          include: {
+            content: {
+              select: {
+                title: true,
+                contentType: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
 
-  return submissions.map((submission) => ({
-    contentTitle: submission.quizInstance.content.title,
-    contentType: submission.quizInstance.content.contentType,
-    correctAnswers: submission.correctAnswers,
-    incorrectAnswers: submission.incorrectAnswers,
-    isCompleted: submission.isCompleted,
-    createdAt: submission.createdAt,
-  }));
-}
+    return submissions.map((submission) => ({
+      contentTitle: submission.quizInstance.content.title,
+      contentType: submission.quizInstance.content.contentType,
+      correctAnswers: submission.correctAnswers,
+      incorrectAnswers: submission.incorrectAnswers,
+      isCompleted: submission.isCompleted,
+      createdAt: submission.createdAt,
+    }));
+  }
 }
