@@ -29,18 +29,17 @@ export class ReviewService {
   }
 
   // --------------------------------Get My Reviews-----------------------------------
-  public async getMyReviews(user: TUser) {
-    const myReviews = await this.prisma.review.findMany({
-      where: { userId: user.id },
-      include: {
-        course: true,
-      },
-    });
-    if (!myReviews) throw new HttpException('Reviews Not Found!', 404);
-    if (myReviews.length === 0)
-      throw new HttpException('You made no review!', 404);
-    return myReviews;
-  }
+public async getMyReviews(user: TUser) {
+  const myReviews = await this.prisma.review.findMany({
+    where: { userId: user.id },
+    include: {
+      course: true,
+    },
+  });
+
+  // Always return success with empty array if no reviews found
+  return myReviews; // Could be empty, which is fine
+}
 
   //----------------------------------Get All Reviews---------------------------------------
   public async getAllReviews() {
