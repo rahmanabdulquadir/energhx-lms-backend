@@ -193,11 +193,12 @@ model Course {
 }
 
 model Module {
-  id        String   @id @default(uuid())
-  title     String
-  thumbnail String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  title            String
+  thumbnail        String
+  videoDurationSum Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   contents Content[]
   courseId String
@@ -216,14 +217,15 @@ model BasicContent {
 }
 
 model Content {
-  id          String        @id @default(uuid())
-  title       String
-  contentType ContentType
-  video       String?
-  description String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  quiz        QuizInstance?
+  id            String        @id @default(uuid())
+  title         String
+  contentType   ContentType
+  video         String?
+  description   String?
+  videoDuration Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  quiz          QuizInstance?
 
   moduleId   String
   module     Module     @relation(fields: [moduleId], references: [id])

@@ -89,7 +89,7 @@ export class GradingService {
 
     const average = await this.getCourseAveragePercentage(userId, courseId);
 
-    if (average < 60) {
+    if (average < 33) {
       console.log(`⛔️ User failed with average: ${average.toFixed(2)}%`);
       throw new BadRequestException('User has not passed the course.');
     }
