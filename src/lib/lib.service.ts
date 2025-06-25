@@ -82,4 +82,16 @@ export class LibService {
       );
     });
   }
+
+  async getVideoMetadata(publicId: string): Promise<any> {
+    try {
+      const result = await cloudinary.api.resource(publicId, {
+        resource_type: 'video',
+      });
+      return result;
+    } catch (error) {
+      console.error('💥 Cloudinary metadata fetch error:', error);
+      throw new Error('Failed to fetch video metadata');
+    }
+  }
 }

@@ -4,12 +4,49 @@ import { CreateContentDto, UpdateContentDto } from './content.dto';
 import { TUser } from 'src/interface/token.type';
 import { UserRole } from '@prisma/client';
 import adminAccessControl from 'src/utils/adminAccessControl';
+import { LibService } from 'src/lib/lib.service';
 
 @Injectable()
 export class ContentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly libService: LibService) {}
 
   //---------------------------------------Create Content--------------------------------------------
+  // public async createContent(data: CreateContentDto, user: TUser) {
+  //   const module = await this.prisma.module.findUnique({
+  //     where: { id: data.moduleId },
+  //     select: {
+  //       course: {
+  //         select: {
+  //           program: {
+  //             select: {
+  //               publishedFor: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+  //   if (!module) throw new HttpException('Module Not Found', 404);
+  //   if (user.userType === UserRole.ADMIN)
+  //     await adminAccessControl(
+  //       this.prisma,
+  //       user,
+  //       module.course.program.publishedFor,
+  //     );
+
+  //   const Content = await this.prisma.content.create({
+  //     data,
+  //   });
+  //   return Content;
+  // }
+  private extractPublicId(videoUrl: string): string {
+    // Example Cloudinary URL: https://res.cloudinary.com/demo/video/upload/v1631640867/sample.mp4
+    const parts = videoUrl.split('/');
+    const fileWithExtension = parts[parts.length - 1];
+    const publicId = fileWithExtension.split('.')[0];
+    return publicId;
+  }
+
   public async createContent(data: CreateContentDto, user: TUser) {
     const module = await this.prisma.module.findUnique({
       where: { id: data.moduleId },
@@ -25,18 +62,46 @@ export class ContentService {
         },
       },
     });
+  
     if (!module) throw new HttpException('Module Not Found', 404);
-    if (user.userType === UserRole.ADMIN)
-      await adminAccessControl(
-        this.prisma,
-        user,
-        module.course.program.publishedFor,
-      );
-
-    const Content = await this.prisma.content.create({
-      data,
+  
+    if (user.userType === UserRole.ADMIN) {
+      await adminAccessControl(this.prisma, user, module.course.program.publishedFor);
+    }
+  
+    // ✅ Validate presence of videoPublicId if contentType is VIDEO
+    if (data.contentType === 'VIDEO') {
+      if (!data.videoPublicId) {
+        throw new HttpException('Missing Cloudinary publicId for video', 400);
+      }
+  
+      // ✅ Directly use publicId
+      const metadata = await this.libService.getVideoMetadata(data.videoPublicId);
+      const videoDuration = Math.floor(metadata?.duration ?? 0);
+      console.log(metadata, videoDuration)
+  
+      // ✅ Save videoDuration, NOT videoPublicId
+      return await this.prisma.content.create({
+        data: {
+          title: data.title,
+          contentType: data.contentType,
+          video: data.videoUrl,
+          description: data.description,
+          videoDuration,
+          moduleId: data.moduleId,
+        },
+      });
+    }
+  
+    // ✅ Handle non-video content creation
+    return await this.prisma.content.create({
+      data: {
+        title: data.title,
+        contentType: data.contentType,
+        description: data.description,
+        moduleId: data.moduleId,
+      },
     });
-    return Content;
   }
 
     // ------------------------------------ Get All Content ------------------------------------

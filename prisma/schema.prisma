@@ -216,22 +216,39 @@ model BasicContent {
   course   Course @relation(fields: [courseId], references: [id])
 }
 
+// model Content {
+//   id            String        @id @default(uuid())
+//   title         String
+//   contentType   ContentType
+//   video         String?
+//   description   String?
+//   videoDuration Int?
+//   createdAt     DateTime      @default(now())
+//   updatedAt     DateTime      @updatedAt
+//   quiz          QuizInstance?
+
+//   moduleId   String
+//   module     Module     @relation(fields: [moduleId], references: [id])
+//   progresses Progress[]
+// }
+
+
 model Content {
-  id            String        @id @default(uuid())
-  title         String
-  contentType   ContentType
-  video         String?
-  description   String?
-  videoDuration Int?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  quiz          QuizInstance?
+  id              String        @id @default(uuid())
+  title           String
+  contentType     ContentType
+  video           String?       // The actual video URL (secure_url from Cloudinary)
+  videoPublicId   String?       // New: The Cloudinary public ID to fetch metadata
+  description     String?
+  videoDuration   Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  quiz            QuizInstance?
 
-  moduleId   String
-  module     Module     @relation(fields: [moduleId], references: [id])
-  progresses Progress[]
+  moduleId        String
+  module          Module        @relation(fields: [moduleId], references: [id])
+  progresses      Progress[]
 }
-
 model Quiz {
   id            String   @id @default(uuid())
   question      String

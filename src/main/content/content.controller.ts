@@ -43,56 +43,80 @@ export class ContentController {
     @Body('text') text: string,
     @UploadedFile() file: any,
   ) {
-    const parsed = JSON.parse(text);
-    const createContentDto = plainToInstance(CreateContentDto, parsed);
-    if (
-      createContentDto.contentType == 'DESCRIPTION' &&
-      !createContentDto.description
-    ) {
-      throw new HttpException(
-        'Description is required for DESCRIPTION content type',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    if (createContentDto.contentType == 'VIDEO') {
-      if (!file)
+    try {
+      // Parse text body and validate DTO shape
+      const parsed = JSON.parse(text);
+      const createContentDto = plainToInstance(CreateContentDto, parsed);
+  
+      // Run basic field validations
+      if (
+        createContentDto.contentType === 'DESCRIPTION' &&
+        !createContentDto.description
+      ) {
         throw new HttpException(
-          'Video file is required',
+          'Description is required for DESCRIPTION content type',
           HttpStatus.BAD_REQUEST,
         );
-      const uploaded = await this.lib.uploadToCloudinary({
-        fileName: file.filename,
-        path: file.path,
-      });
-      if (uploaded?.secure_url) {
-        createContentDto.video = uploaded.secure_url;
       }
-    }
-    const errors = await validate(createContentDto);
-    if (errors.length > 0) {
-      return res.status(400).json({
+  
+      if (createContentDto.contentType === 'VIDEO') {
+        if (!file) {
+          throw new HttpException('Video file is required', HttpStatus.BAD_REQUEST);
+        }
+  
+        const uploaded = await this.lib.uploadToCloudinary({
+          fileName: file.filename,
+          path: file.path,
+        });
+  
+        if (!uploaded?.secure_url || !uploaded?.public_id) {
+          throw new HttpException('Failed to upload video', 500);
+        }
+  
+        // ✅ Assign both URL and public_id
+        createContentDto.videoUrl = uploaded.secure_url;
+        createContentDto.videoPublicId = uploaded.public_id;
+      }
+  
+      // Validate final shape of DTO
+      const errors = await validate(createContentDto);
+      if (errors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          statusCode: HttpStatus.BAD_REQUEST,
+          message:
+            Object.values(errors[0].constraints || {})[0] || 'Validation failed',
+          errorDetails: errors.map((err) => ({
+            property: err.property,
+            constraints: err.constraints,
+          })),
+        });
+      }
+  
+      // Create the content
+      const result = await this.contentService.createContent(
+        createContentDto,
+        req.user,
+      );
+  
+      sendResponse(res, {
+        statusCode: HttpStatus.CREATED,
+        success: true,
+        message: 'Content created successfully',
+        data: result,
+      });
+  
+    } catch (err) {
+      console.error('💥 Content creation error:', err);
+      sendResponse(res, {
+        statusCode: err?.status || 500,
         success: false,
-        statusCode: HttpStatus.BAD_REQUEST,
-        message:
-          Object.values(errors[0].constraints || {})[0] || 'Validation failed',
-        errorDetails: errors.map((err) => ({
-          property: err.property,
-          constraints: err.constraints,
-        })),
+        message: err?.message || 'Internal server error',
+        data: null,
       });
     }
-    const result = await this.contentService.createContent(
-      createContentDto,
-      req.user,
-    );
-    sendResponse(res, {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Content created successfully',
-      data: result,
-    });
   }
-
+  
   @Get()
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   public async getAllContent(@Req() req: Request, @Res() res: Response) {
