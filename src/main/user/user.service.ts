@@ -287,18 +287,17 @@ export class UserService {
     return updatedUser;
   }
 
-
   private async checkAndPromoteIfCertified(userId: string, programId: string) {
     console.log('🎯 Re-checking for full program certification...');
-  
+
     const programCourses = await this.prisma.course.findMany({
       where: { programId },
       select: { id: true },
     });
-  
+
     const programCourseIds = programCourses.map((course) => course.id);
     console.log('📘 Program Courses:', programCourseIds);
-  
+
     const userProgresses = await this.prisma.progress.findMany({
       where: {
         userId,
@@ -306,20 +305,21 @@ export class UserService {
       },
       select: { courseId: true, percentage: true },
     });
-  
+
     console.log('📈 User Progresses:', userProgresses);
-  
+
     const allCompleted = programCourseIds.every((courseId) =>
       userProgresses.some(
-        (progress) => progress.courseId === courseId && progress.percentage === 100,
+        (progress) =>
+          progress.courseId === courseId && progress.percentage === 100,
       ),
     );
-  
+
     console.log('✅ All program courses completed:', allCompleted);
-  
+
     if (allCompleted) {
       console.log('🏅 Promoting user to CERTIFIED');
-  
+
       await this.prisma.$transaction(async (tx) => {
         await tx.userProgram.update({
           where: {
@@ -332,12 +332,12 @@ export class UserService {
             status: UserProgramStatus.CERTIFIED,
           },
         });
-  
+
         const userToPromote = await tx.user.findUnique({
           where: { id: userId },
           select: { level: true },
         });
-  
+
         if (userToPromote?.level !== 'CERTIFIED') {
           await tx.user.update({
             where: { id: userId },
@@ -350,7 +350,6 @@ export class UserService {
       });
     }
   }
-  
 
   //----------------------------------------Set Progress--------------------------------------------------
   public async setProgress(courseId: string, user: TUser, contentId: string) {
@@ -358,24 +357,31 @@ export class UserService {
     console.log('👤 User:', user.id);
     console.log('📘 Course:', courseId);
     console.log('📄 Content:', contentId);
-  
+
     const userRecord = await this.prisma.user.findUnique({
       where: { id: user.id, status: 'ACTIVE' },
       include: {
         enrolledPrograms: true,
       },
     });
-    if (!userRecord) throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    if (!userRecord)
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     if (userRecord.enrolledPrograms.length === 0)
-      throw new HttpException('No enrolled courses found for this user', HttpStatus.NOT_FOUND);
-  
+      throw new HttpException(
+        'No enrolled courses found for this user',
+        HttpStatus.NOT_FOUND,
+      );
+
     const courseProgram = await this.prisma.course.findUnique({
       where: { id: courseId },
       select: { programId: true },
     });
     if (!courseProgram?.programId)
-      throw new HttpException('Course not found or has no associated program', HttpStatus.NOT_FOUND);
-  
+      throw new HttpException(
+        'Course not found or has no associated program',
+        HttpStatus.NOT_FOUND,
+      );
+
     const isEnrolled = await this.prisma.userProgram.findUnique({
       where: {
         userId_programId: {
@@ -384,10 +390,13 @@ export class UserService {
         },
       },
     });
-  
+
     if (!isEnrolled || isEnrolled.status === UserProgramStatus.BASIC)
-      throw new HttpException('You are not enrolled in this course', HttpStatus.BAD_REQUEST);
-  
+      throw new HttpException(
+        'You are not enrolled in this course',
+        HttpStatus.BAD_REQUEST,
+      );
+
     const modules = await this.prisma.module.findMany({
       where: { courseId },
       include: {
@@ -397,30 +406,35 @@ export class UserService {
         },
       },
     });
-  
+
     const contentIds = modules.flatMap((module) =>
       module.contents.map((content) => content.id),
     );
     console.log('🧾 All contents:', contentIds);
-  
+
     const index = contentIds.findIndex((content) => content === contentId);
-    if (index === -1) throw new HttpException('Content not found in enrolled course.', 401);
-  
+    if (index === -1)
+      throw new HttpException('Content not found in enrolled course.', 401);
+
     const existingProgress = await this.prisma.progress.findUnique({
       where: { userId_courseId: { userId: user.id, courseId } },
     });
-  
+
     if (!existingProgress && contentIds[0] !== contentId)
-      throw new HttpException('This content is locked. Start from the first content.', 403);
-  
+      throw new HttpException(
+        'This content is locked. Start from the first content.',
+        403,
+      );
+
     const prevIndex = contentIds.findIndex(
       (content) => content === existingProgress?.contentId,
     );
-  
+
     if (existingProgress && index - 1 > prevIndex) {
       throw new HttpException(
         {
-          message: 'This content is locked. Please complete previous contents first.',
+          message:
+            'This content is locked. Please complete previous contents first.',
           statusCode: 403,
           errorType: 'LOCKED_CONTENT',
           requiredContentId: contentIds[prevIndex + 1] ?? null,
@@ -428,17 +442,19 @@ export class UserService {
         HttpStatus.FORBIDDEN,
       );
     }
-  
+
     if (existingProgress && index <= prevIndex) {
-      console.log('⚠️ Skipping update: Already watched or behind current progress');
+      console.log(
+        '⚠️ Skipping update: Already watched or behind current progress',
+      );
       console.log('📌 currentIndex:', index, '| prevIndex:', prevIndex);
       console.log('📈 existingPercentage:', existingProgress.percentage);
-    
+
       // ⚠️ Even if progress not updated, still check if promotion is needed
       if (existingProgress.percentage === 100) {
         await this.checkAndPromoteIfCertified(user.id, courseProgram.programId);
       }
-    
+
       return {
         watchedContents: contentIds.slice(0, prevIndex + 1),
         percentage: existingProgress.percentage,
@@ -446,7 +462,7 @@ export class UserService {
     }
     const percentage = Math.round(((index + 1) / contentIds.length) * 100);
     console.log('📊 Updated percentage:', percentage);
-  
+
     await this.prisma.progress.upsert({
       where: { userId_courseId: { userId: user.id, courseId } },
       update: { percentage, contentId },
@@ -455,15 +471,15 @@ export class UserService {
     // ✅ Check for full program completion
     if (percentage === 100) {
       console.log('🎯 Checking full program completion');
-  
+
       const programCourses = await this.prisma.course.findMany({
         where: { programId: courseProgram.programId },
         select: { id: true },
       });
-  
+
       const programCourseIds = programCourses.map((course) => course.id);
       console.log('📘 Program Courses:', programCourseIds);
-  
+
       const userProgresses = await this.prisma.progress.findMany({
         where: {
           userId: user.id,
@@ -472,19 +488,19 @@ export class UserService {
         select: { courseId: true, percentage: true },
       });
       console.log('📈 User Progresses:', userProgresses);
-  
+
       const allCompleted = programCourseIds.every((courseId) =>
         userProgresses.some(
           (progress) =>
             progress.courseId === courseId && progress.percentage === 100,
         ),
       );
-  
+
       console.log('✅ All program courses completed:', allCompleted);
-  
+
       if (allCompleted) {
         console.log('🏅 Promoting user to CERTIFIED');
-  
+
         await this.prisma.$transaction(async (tx) => {
           await tx.userProgram.update({
             where: {
@@ -497,12 +513,12 @@ export class UserService {
               status: UserProgramStatus.CERTIFIED,
             },
           });
-  
+
           const userToPromote = await tx.user.findUnique({
             where: { id: user.id },
             select: { level: true },
           });
-  
+
           if (userToPromote?.level !== 'CERTIFIED') {
             await tx.user.update({
               where: { id: user.id },
@@ -515,14 +531,13 @@ export class UserService {
         });
       }
     }
-  
+
     const watchedContents = contentIds.slice(0, index + 1);
     return {
       watchedContents,
       percentage,
     };
   }
-  
 
   //----------------------------------------Get Progress-------------------------------------------------
   public async getProgress(courseId: string, user: TUser) {
