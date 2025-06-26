@@ -110,19 +110,28 @@ export class BasicContentService {
           },
         },
       });
-
-      if (!basicContent)
+  
+      if (!basicContent) {
         throw new HttpException(
           'Basic content not found',
           HttpStatus.NOT_FOUND,
         );
-      if (user.userType === UserRole.ADMIN)
+      }
+  
+      if (user.userType === UserRole.ADMIN) {
         await adminAccessControl(
           this.prisma,
           user,
           basicContent.course.program.publishedFor,
         );
-      return null;
+      }
+  
+      // ✅ Actually delete the record
+      const deleted = await tx.basicContent.delete({
+        where: { id },
+      });
+  
+      return deleted;
     });
   }
 }
