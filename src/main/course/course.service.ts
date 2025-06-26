@@ -39,26 +39,51 @@ export class CourseService {
         programId: true,
       },
     });
+  
     if (!course) throw new HttpException('Course Not Found', 404);
-
-    if (user.userType === UserRole.ADMIN)
+  
+    if (user.userType === UserRole.ADMIN) {
       await adminAccessControl(this.prisma, user, course.program.publishedFor);
-    if (user.userType === UserRole.SUPER_ADMIN ) {
+    }
+  
+    // ✅ SUPER_ADMIN access: full contents with duration
+    if (user.userType === UserRole.SUPER_ADMIN) {
       const result = await this.prisma.course.findUnique({
         where: { id },
         include: {
           basicContents: true,
-          modules: true,
+          modules: {
+            include: {
+              contents: {
+                select: { videoDuration: true },
+              },
+            },
+          },
         },
       });
-      return result;
+  
+      if (!result) throw new HttpException('Course Not Found', 404);
+  
+      const totalDuration = result.modules.reduce((acc, mod) => {
+        const moduleDuration = mod.contents.reduce(
+          (sum, content) => sum + (content.videoDuration || 0),
+          0,
+        );
+        return acc + moduleDuration;
+      }, 0);
+  
+      return { ...result, totalDuration };
     }
-    if (user.userType !== 'ADMIN' ) {
-      if (course.program.publishedFor !== user.userType)
+  
+    // ✅ Other roles
+    if (user.userType !== 'ADMIN') {
+      if (course.program.publishedFor !== user.userType) {
         throw new HttpException(
           'This course is not for you to view',
           HttpStatus.BAD_REQUEST,
         );
+      }
+  
       const userProgram = await this.prisma.userProgram.findUnique({
         where: {
           userId_programId: {
@@ -67,44 +92,55 @@ export class CourseService {
           },
         },
       });
-      console.log(userProgram);
-
+  
       if (
         !userProgram ||
-        (userProgram?.status !== UserProgramStatus.STANDARD &&
-          userProgram?.status !== UserProgramStatus.CERTIFIED)
+        (userProgram.status !== UserProgramStatus.STANDARD &&
+          userProgram.status !== UserProgramStatus.CERTIFIED)
       ) {
         const result = await this.prisma.course.findUnique({
           where: { id },
           include: {
             basicContents: true,
-            modules: false,
           },
         });
+  
+        if (!result) throw new HttpException('Course Not Found', 404);
+  
         return result;
       }
     }
+  
+    // ✅ For STANDARD or CERTIFIED users
     const result = await this.prisma.course.findUnique({
       where: { id },
       include: {
         modules: {
           include: {
-            _count: {
-              select: { contents: true },
+            contents: {
+              select: { videoDuration: true },
             },
           },
         },
-        basicContents: false,
       },
     });
-    return result;
+  
+    if (!result) throw new HttpException('Course Not Found', 404);
+  
+    const totalDuration = result.modules.reduce((acc, mod) => {
+      const moduleDuration = mod.contents.reduce(
+        (sum, content) => sum + (content.videoDuration || 0),
+        0,
+      );
+      return acc + moduleDuration;
+    }, 0);
+  
+    return { ...result, totalDuration };
   }
-
+  
   //----------------------------------Get All Courses---------------------------------------
-  public async getAllCourses() {
-    const result = await this.prisma.course.findMany();
-    return result;
-  }
+
+  
 
   //------------------------------------Update Course---------------------------------------
   public async updateCourse(id: string, data: UpdateCourseDto, user: TUser) {
