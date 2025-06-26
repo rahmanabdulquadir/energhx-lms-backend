@@ -29,7 +29,7 @@ model User {
 
   isVerified Boolean    @default(false)
   userType   UserRole
-  status     Status     @default(ACTIVE)
+  status     Status     @default(BASIC)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   developer  Developer?
@@ -67,7 +67,7 @@ model State {
 model Developer {
   id     String @id @default(uuid())
   email  String @unique
-  status Status @default(ACTIVE)
+  status Status @default(STANDARD)
 
   references   Reference[]
   publications Publication[]
@@ -80,7 +80,7 @@ model Developer {
 model Server {
   id     String @id @default(uuid())
   email  String @unique
-  status Status @default(ACTIVE)
+  status Status @default(STANDARD)
 
   references   Reference[]
   publications Publication[]
@@ -93,7 +93,7 @@ model Server {
 model Admin {
   id        String                @id @default(uuid())
   email     String                @unique
-  status    Status                @default(ACTIVE)
+  // status    Status                @default()
   canAccess RolesToAccessForAdmin
 
   user   User   @relation(fields: [userId], references: [id])
@@ -232,23 +232,23 @@ model BasicContent {
 //   progresses Progress[]
 // }
 
-
 model Content {
-  id              String        @id @default(uuid())
-  title           String
-  contentType     ContentType
-  video           String?       // The actual video URL (secure_url from Cloudinary)
-  videoPublicId   String?       // New: The Cloudinary public ID to fetch metadata
-  description     String?
-  videoDuration   Int?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  quiz            QuizInstance?
+  id            String        @id @default(uuid())
+  title         String
+  contentType   ContentType
+  video         String? // The actual video URL (secure_url from Cloudinary)
+  videoPublicId String? // New: The Cloudinary public ID to fetch metadata
+  description   String?
+  videoDuration Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  quiz          QuizInstance?
 
-  moduleId        String
-  module          Module        @relation(fields: [moduleId], references: [id])
-  progresses      Progress[]
+  moduleId   String
+  module     Module     @relation(fields: [moduleId], references: [id])
+  progresses Progress[]
 }
+
 model Quiz {
   id            String   @id @default(uuid())
   question      String
@@ -347,8 +347,9 @@ enum RolesToAccessForAdmin {
 }
 
 enum Status {
-  BLOCKED
-  ACTIVE
+  BASIC
+  STANDARD
+  CERTIFIED
 }
 
 enum Gender {
