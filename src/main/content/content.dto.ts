@@ -1,5 +1,12 @@
 import { ContentType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, ValidateIf } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateContentDto {
   @IsString()
@@ -14,6 +21,10 @@ export class CreateContentDto {
   videoPublicId?: string; // actual Cloudinary public_id (used for metadata)
 
   @IsOptional()
+  @IsNumber()
+  videoDuration?: number;
+
+  @IsOptional()
   @IsString()
   description?: string;
 
@@ -23,7 +34,6 @@ export class CreateContentDto {
   @IsUUID()
   moduleId: string;
 }
-
 
 export class UpdateContentDto {
   @IsOptional()

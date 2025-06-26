@@ -8,7 +8,10 @@ import { LibService } from 'src/lib/lib.service';
 
 @Injectable()
 export class ContentService {
-  constructor(private prisma: PrismaService, private readonly libService: LibService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly libService: LibService,
+  ) {}
 
   //---------------------------------------Create Content--------------------------------------------
   // public async createContent(data: CreateContentDto, user: TUser) {
@@ -62,38 +65,39 @@ export class ContentService {
         },
       },
     });
-  
+
     if (!module) throw new HttpException('Module Not Found', 404);
-  
+
     if (user.userType === UserRole.ADMIN) {
-      await adminAccessControl(this.prisma, user, module.course.program.publishedFor);
+      await adminAccessControl(
+        this.prisma,
+        user,
+        module.course.program.publishedFor,
+      );
     }
-  
-    // ✅ Validate presence of videoPublicId if contentType is VIDEO
+
     if (data.contentType === 'VIDEO') {
       if (!data.videoPublicId) {
         throw new HttpException('Missing Cloudinary publicId for video', 400);
       }
-  
-      // ✅ Directly use publicId
-      const metadata = await this.libService.getVideoMetadata(data.videoPublicId);
-      const videoDuration = Math.floor(metadata?.duration ?? 0);
-      console.log(metadata, videoDuration)
-  
-      // ✅ Save videoDuration, NOT videoPublicId
+
+      if (typeof data.videoDuration !== 'number' || data.videoDuration <= 0) {
+        throw new HttpException('Invalid or missing video duration', 400);
+      }
+
       return await this.prisma.content.create({
         data: {
           title: data.title,
           contentType: data.contentType,
           video: data.videoUrl,
           description: data.description,
-          videoDuration,
+          videoDuration: Math.floor(data.videoDuration),
+          videoPublicId: data.videoPublicId,
           moduleId: data.moduleId,
         },
       });
     }
-  
-    // ✅ Handle non-video content creation
+
     return await this.prisma.content.create({
       data: {
         title: data.title,
@@ -104,74 +108,73 @@ export class ContentService {
     });
   }
 
-    // ------------------------------------ Get All Content ------------------------------------
-    public async getAllContent() {
-      const contents = await this.prisma.content.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          module: {
-            select: {
-              title: true,
-              course: {
-                select: {
-                  title: true,
-                  program: {
-                    select: {
-                      title: true,
-                      publishedFor: true,
-                    },
+  // ------------------------------------ Get All Content ------------------------------------
+  public async getAllContent() {
+    const contents = await this.prisma.content.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        module: {
+          select: {
+            title: true,
+            course: {
+              select: {
+                title: true,
+                program: {
+                  select: {
+                    title: true,
+                    publishedFor: true,
                   },
                 },
               },
             },
           },
         },
-      });
-  
-      return contents;
-    }
+      },
+    });
+
+    return contents;
+  }
 
   // Get single content
-public async getSingleContent(id: string, user: TUser) {
-  const content = await this.prisma.content.findUnique({
-    where: { id },
-    include: {
-      module: {
-        select: {
-          course: {
-            select: {
-              program: {
-                select: {
-                  publishedFor: true,
+  public async getSingleContent(id: string, user: TUser) {
+    const content = await this.prisma.content.findUnique({
+      where: { id },
+      include: {
+        module: {
+          select: {
+            course: {
+              select: {
+                program: {
+                  select: {
+                    publishedFor: true,
+                  },
                 },
               },
             },
           },
         },
-      },
-      quiz: {
-        include: {
-          quizzes: true,
+        quiz: {
+          include: {
+            quizzes: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!content) {
-    throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+    if (!content) {
+      throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (user.userType === UserRole.ADMIN) {
+      await adminAccessControl(
+        this.prisma,
+        user,
+        content.module.course.program.publishedFor,
+      );
+    }
+
+    return content;
   }
-
-  if (user.userType === UserRole.ADMIN) {
-    await adminAccessControl(
-      this.prisma,
-      user,
-      content.module.course.program.publishedFor,
-    );
-  }
-
-  return content;
-}
-
 
   //---------------------------------------Update Content--------------------------------------------
   public async updateContent(id: string, data: UpdateContentDto, user: TUser) {
@@ -231,10 +234,10 @@ public async getSingleContent(id: string, user: TUser) {
         },
       },
     });
-  
+
     if (!content)
       throw new HttpException('Content not found', HttpStatus.NOT_FOUND);
-  
+
     if (user.userType === UserRole.ADMIN) {
       await adminAccessControl(
         this.prisma,
@@ -242,83 +245,90 @@ public async getSingleContent(id: string, user: TUser) {
         content.module.course.program.publishedFor,
       );
     }
-  
+
     const courseId = content.module.course.id;
-  
+
     // Now run the rest inside a transaction with increased timeout
-    return this.prisma.$transaction(async (tx) => {
-      // Get all modules + content
-      const modules = await tx.module.findMany({
-        where: { courseId },
-        include: {
-          contents: {
-            orderBy: { createdAt: 'asc' },
-            select: { id: true },
+    return this.prisma.$transaction(
+      async (tx) => {
+        // Get all modules + content
+        const modules = await tx.module.findMany({
+          where: { courseId },
+          include: {
+            contents: {
+              orderBy: { createdAt: 'asc' },
+              select: { id: true },
+            },
           },
-        },
-      });
-  
-      const orderedContentIds = modules.flatMap((mod) =>
-        mod.contents.map((c) => c.id),
-      );
-      const deletedIndex = orderedContentIds.findIndex((cid) => cid === id);
-      const previousContentId = orderedContentIds[deletedIndex - 1] ?? null;
-  
-      // Update or delete user progress
-      const progressRecords = await tx.progress.findMany({
-        where: { courseId },
-      });
-  
-      const progressOps = progressRecords.map((progress) => {
-        if (progress.contentId === id) {
-          if (previousContentId) {
-            return tx.progress.update({
-              where: { userId_courseId: { userId: progress.userId, courseId } },
-              data: { contentId: previousContentId },
-            });
-          } else {
-            return tx.progress.delete({
-              where: { userId_courseId: { userId: progress.userId, courseId } },
-            });
+        });
+
+        const orderedContentIds = modules.flatMap((mod) =>
+          mod.contents.map((c) => c.id),
+        );
+        const deletedIndex = orderedContentIds.findIndex((cid) => cid === id);
+        const previousContentId = orderedContentIds[deletedIndex - 1] ?? null;
+
+        // Update or delete user progress
+        const progressRecords = await tx.progress.findMany({
+          where: { courseId },
+        });
+
+        const progressOps = progressRecords.map((progress) => {
+          if (progress.contentId === id) {
+            if (previousContentId) {
+              return tx.progress.update({
+                where: {
+                  userId_courseId: { userId: progress.userId, courseId },
+                },
+                data: { contentId: previousContentId },
+              });
+            } else {
+              return tx.progress.delete({
+                where: {
+                  userId_courseId: { userId: progress.userId, courseId },
+                },
+              });
+            }
           }
+          return null;
+        });
+
+        await Promise.all(progressOps.filter(Boolean)); // filter out nulls
+
+        // Delete quizzes if they exist
+        const quiz = await tx.quizInstance.findUnique({
+          where: { id: id }, // you might want to refactor how you fetch this ID
+          include: {
+            quizzes: true,
+            quizSubmissions: true,
+          },
+        });
+
+        if (quiz) {
+          await tx.quizSubmission.deleteMany({
+            where: { quizInstanceId: quiz.id },
+          });
+
+          await tx.quiz.deleteMany({
+            where: { quizInstanceId: quiz.id },
+          });
+
+          await tx.quizInstance.delete({
+            where: { id: quiz.id },
+          });
         }
+
+        // Finally, delete the content
+        await tx.content.delete({
+          where: { id },
+        });
+
         return null;
-      });
-  
-      await Promise.all(progressOps.filter(Boolean)); // filter out nulls
-  
-      // Delete quizzes if they exist
-      const quiz = await tx.quizInstance.findUnique({
-        where: { id: id }, // you might want to refactor how you fetch this ID
-        include: {
-          quizzes: true,
-          quizSubmissions: true,
-        },
-      });
-  
-      if (quiz) {
-        await tx.quizSubmission.deleteMany({
-          where: { quizInstanceId: quiz.id },
-        });
-  
-        await tx.quiz.deleteMany({
-          where: { quizInstanceId: quiz.id },
-        });
-  
-        await tx.quizInstance.delete({
-          where: { id: quiz.id },
-        });
-      }
-  
-      // Finally, delete the content
-      await tx.content.delete({
-        where: { id },
-      });
-  
-      return null;
-    }, {
-      maxWait: 10000,  // max time to wait to get a connection (10 seconds)
-      timeout: 15000,  // max time for transaction to complete (15 seconds)
-    });
+      },
+      {
+        maxWait: 10000, // max time to wait to get a connection (10 seconds)
+        timeout: 15000, // max time for transaction to complete (15 seconds)
+      },
+    );
   }
 }

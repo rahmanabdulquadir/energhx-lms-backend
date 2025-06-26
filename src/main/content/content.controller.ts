@@ -44,11 +44,10 @@ export class ContentController {
     @UploadedFile() file: any,
   ) {
     try {
-      // Parse text body and validate DTO shape
       const parsed = JSON.parse(text);
       const createContentDto = plainToInstance(CreateContentDto, parsed);
   
-      // Run basic field validations
+      // Validate for DESCRIPTION content
       if (
         createContentDto.contentType === 'DESCRIPTION' &&
         !createContentDto.description
@@ -59,6 +58,7 @@ export class ContentController {
         );
       }
   
+      // Handle VIDEO content
       if (createContentDto.contentType === 'VIDEO') {
         if (!file) {
           throw new HttpException('Video file is required', HttpStatus.BAD_REQUEST);
@@ -73,12 +73,12 @@ export class ContentController {
           throw new HttpException('Failed to upload video', 500);
         }
   
-        // ✅ Assign both URL and public_id
+        // ✅ Assign video URL, public ID, and duration directly from upload response
         createContentDto.videoUrl = uploaded.secure_url;
         createContentDto.videoPublicId = uploaded.public_id;
+        createContentDto.videoDuration = Math.floor(uploaded.duration || 0); // <-- THIS LINE is key
       }
   
-      // Validate final shape of DTO
       const errors = await validate(createContentDto);
       if (errors.length > 0) {
         return res.status(400).json({
@@ -93,7 +93,6 @@ export class ContentController {
         });
       }
   
-      // Create the content
       const result = await this.contentService.createContent(
         createContentDto,
         req.user,

@@ -66,32 +66,51 @@ export class LibService {
     path: string;
   }): Promise<UploadApiResponse> {
     const resourceType = this.getResourceType(path);
+    const cleanFileName = fileName.replace(/\.[^/.]+$/, '');
+  
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
         path,
-        { public_id: fileName, resource_type: resourceType },
+        {
+          public_id: cleanFileName,
+          resource_type: resourceType,
+        },
         (error, result) => {
           fs.unlink(path, (err) => {
             if (err) this.logger.error(`Error deleting local file: ${err}`);
             else this.logger.log('Local file deleted successfully.');
           });
-
-          if (error) return reject(error as UploadApiErrorResponse);
+  
+          if (error) {
+            this.logger.error('💥 Cloudinary upload error:', error);
+            return reject(error as UploadApiErrorResponse);
+          }
+  
+          this.logger.debug('✅ Cloudinary upload success:', result);
           resolve(result as UploadApiResponse);
         },
       );
     });
   }
-
-  async getVideoMetadata(publicId: string): Promise<any> {
-    try {
-      const result = await cloudinary.api.resource(publicId, {
+  
+  async getVideoMetadataWithRetry(publicId: string, maxRetries = 5, delayMs = 2000): Promise<any> {
+    for (let i = 0; i < maxRetries; i++) {
+      const metadata = await cloudinary.api.resource(publicId, {
         resource_type: 'video',
       });
-      return result;
-    } catch (error) {
-      console.error('💥 Cloudinary metadata fetch error:', error);
-      throw new Error('Failed to fetch video metadata');
+  
+      this.logger.debug(`🔁 [Retry ${i + 1}] Metadata received:`, metadata);
+  
+      // ✅ Fix: use explicit check for number
+      if (typeof metadata?.duration === 'number' && metadata.duration > 0) {
+        return metadata;
+      }
+  
+      // 🔁 Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
+  
+    throw new Error('Failed to fetch video duration after multiple retries');
   }
+  
 }
