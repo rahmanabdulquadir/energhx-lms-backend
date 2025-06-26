@@ -81,73 +81,56 @@ export class StripeService {
     const signature = req.headers['stripe-signature'] as string;
     const rawBody = req.body as Buffer;
   
-    console.log('📥 Received webhook at Stripe endpoint');
+    console.log('📥 Stripe webhook hit');
   
-    if (!rawBody) {
-      console.error('❌ No rawBody found in request');
-      throw new BadRequestException('No webhook payload was provided.');
-    }
+    if (!rawBody) throw new BadRequestException('Missing raw body');
   
     const endpointSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
-    if (!endpointSecret) {
-      console.error('❌ Missing STRIPE_WEBHOOK_SECRET in environment variables');
-      throw new BadRequestException('Webhook secret not configured');
-    }
+    if (!endpointSecret) throw new BadRequestException('Missing STRIPE_WEBHOOK_SECRET');
   
     let event: Stripe.Event;
     try {
       event = this.stripe.webhooks.constructEvent(rawBody, signature, endpointSecret);
     } catch (err: any) {
-      console.error('❌ Stripe signature verification failed:', err.message);
+      console.error('❌ Stripe signature error:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
     }
-  
-    console.log('✅ Stripe event received:', event.type);
   
     const data = event.data.object as Stripe.PaymentIntent;
     const metadata = data.metadata;
   
-    console.log('📦 Metadata received:', metadata);
-    console.log('🔍 PaymentIntent ID:', data.id);
-    console.log('💸 Amount received:', data.amount_received);
-    console.log('💳 Status:', data.status);
+    const userId = metadata?.userId;
+    const programId = metadata?.programId;
   
-    const userId = metadata.userId;
-    const programId = metadata.programId;
+    console.log('✅ Event received:', event.type);
+    console.log('🧾 Metadata:', metadata);
   
     if (event.type === 'payment_intent.succeeded') {
-      console.log('🎉 Payment succeeded! Proceeding with DB update...');
-  
       if (!userId || !programId) {
-        console.warn('⚠️ Missing metadata:', { userId, programId });
+        console.warn('⚠️ Metadata missing userId or programId');
         return { received: true, warning: 'Missing metadata' };
       }
   
-      const existing = await this.prisma.userProgram.findUnique({
-        where: {
-          userId_programId: {
-            userId,
-            programId,
-          },
-        },
-      });
-  
-      if (!existing) {
-        console.warn('⚠️ No userProgram found:', { userId, programId });
-        return { received: true, warning: 'No matching userProgram found' };
-      }
-  
-      console.log('📌 Existing userProgram found:', existing);
+      console.log(`🔎 Looking for userProgram with userId=${userId} and programId=${programId}`);
   
       await this.prisma.$transaction(async (tx) => {
-        console.log('🔄 Starting DB transaction...');
+        const userProgram = await tx.userProgram.findUnique({
+          where: {
+            userId_programId: { userId, programId },
+          },
+        });
   
+        if (!userProgram) {
+          console.warn('⚠️ No userProgram found');
+          return;
+        }
+  
+        console.log('✅ userProgram found:', userProgram);
+  
+        // Update userProgram payment status
         await tx.userProgram.update({
           where: {
-            userId_programId: {
-              userId,
-              programId,
-            },
+            userId_programId: { userId, programId },
           },
           data: {
             paymentIntentId: data.id,
@@ -157,48 +140,41 @@ export class StripeService {
           },
         });
   
-        console.log('✅ userProgram updated successfully');
+        console.log('📝 userProgram updated');
   
+        // Now update user level
         const user = await tx.user.findUnique({ where: { id: userId } });
   
         if (!user) {
-          console.warn('❌ User not found while updating level');
+          console.error('❌ User not found, skipping level update');
           return;
         }
   
-        console.log(`🧍 User found with current level: ${user.level}`);
+        console.log('🧍 User before update:', { id: user.id, level: user.level });
   
         if (user.level !== 'CERTIFIED') {
           await tx.user.update({
             where: { id: userId },
             data: { level: 'STANDARD' },
           });
-          console.log('🌟 User level updated to STANDARD');
+          console.log('✅ User level updated to STANDARD');
         } else {
-          console.log('ℹ️ User is already CERTIFIED. Level not changed.');
+          console.log('ℹ️ User already CERTIFIED, level not changed');
         }
-  
-        console.log('✅ Transaction complete!');
       });
     }
   
     if (event.type === 'payment_intent.payment_failed') {
       console.warn('❌ Payment failed for:', { userId, programId });
   
-      const failed = await this.prisma.userProgram.updateMany({
-        where: {
-          userId,
-          programId,
-        },
-        data: {
-          paymentStatus: PaymentStatus.FAILED,
-        },
+      await this.prisma.userProgram.updateMany({
+        where: { userId, programId },
+        data: { paymentStatus: PaymentStatus.FAILED },
       });
   
-      console.warn('🚨 Updated paymentStatus to FAILED:', failed);
+      console.warn('🚨 Payment status set to FAILED');
     }
   
-    console.log(`📬 Webhook handling complete for event: ${event.type}`);
     return { received: true, type: event.type };
   }
   
