@@ -96,11 +96,7 @@ export class StripeService {
   
     let event: Stripe.Event;
     try {
-      event = this.stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        endpointSecret,
-      );
+      event = this.stripe.webhooks.constructEvent(rawBody, signature, endpointSecret);
     } catch (err: any) {
       console.error('❌ Stripe signature verification failed:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
@@ -120,6 +116,8 @@ export class StripeService {
     const programId = metadata.programId;
   
     if (event.type === 'payment_intent.succeeded') {
+      console.log('🎉 Payment succeeded! Proceeding with DB update...');
+  
       if (!userId || !programId) {
         console.warn('⚠️ Missing metadata:', { userId, programId });
         return { received: true, warning: 'Missing metadata' };
@@ -141,22 +139,47 @@ export class StripeService {
   
       console.log('📌 Existing userProgram found:', existing);
   
-      const updated = await this.prisma.userProgram.update({
-        where: {
-          userId_programId: {
-            userId,
-            programId,
-          },
-        },
-        data: {
-          paymentIntentId: data.id,
-          status: UserProgramStatus.STANDARD,
-          paymentMethod: 'card',
-          paymentStatus: PaymentStatus.SUCCESS,
-        },
-      });
+      await this.prisma.$transaction(async (tx) => {
+        console.log('🔄 Starting DB transaction...');
   
-      console.log('✅ userProgram updated successfully:', updated);
+        await tx.userProgram.update({
+          where: {
+            userId_programId: {
+              userId,
+              programId,
+            },
+          },
+          data: {
+            paymentIntentId: data.id,
+            status: UserProgramStatus.STANDARD,
+            paymentMethod: 'card',
+            paymentStatus: PaymentStatus.SUCCESS,
+          },
+        });
+  
+        console.log('✅ userProgram updated successfully');
+  
+        const user = await tx.user.findUnique({ where: { id: userId } });
+  
+        if (!user) {
+          console.warn('❌ User not found while updating level');
+          return;
+        }
+  
+        console.log(`🧍 User found with current level: ${user.level}`);
+  
+        if (user.level !== 'CERTIFIED') {
+          await tx.user.update({
+            where: { id: userId },
+            data: { level: 'STANDARD' },
+          });
+          console.log('🌟 User level updated to STANDARD');
+        } else {
+          console.log('ℹ️ User is already CERTIFIED. Level not changed.');
+        }
+  
+        console.log('✅ Transaction complete!');
+      });
     }
   
     if (event.type === 'payment_intent.payment_failed') {
@@ -175,8 +198,11 @@ export class StripeService {
       console.warn('🚨 Updated paymentStatus to FAILED:', failed);
     }
   
+    console.log(`📬 Webhook handling complete for event: ${event.type}`);
     return { received: true, type: event.type };
   }
+  
+  
   
 
   async constructWebhookEvent(payload: Buffer, signature: string) {
