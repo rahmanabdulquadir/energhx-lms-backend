@@ -42,6 +42,8 @@ model User {
   enrolledPrograms UserProgram[]
 
   Certificate Certificate[]
+
+  level      UserLevel  @default(BASIC)
 }
 
 model Country {
@@ -345,6 +347,13 @@ enum UserRole {
   DEVELOPER
   ADMIN
   SUPER_ADMIN
+}
+
+enum UserLevel {
+  BASIC
+  ADMIN
+  STANDARD
+  CERTIFIED
 }
 
 enum RolesToAccessForAdmin {

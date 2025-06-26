@@ -33,7 +33,6 @@ export class BasicContentService {
     return basicContent;
   }
 
-
   public async getAllBasicContent() {
     const allContent = await this.prisma.basicContent.findMany({
       orderBy: {
@@ -53,7 +52,7 @@ export class BasicContentService {
         },
       },
     });
-  
+
     return allContent;
   }
   //---------------------------------------Update Basic Content--------------------------------------------
@@ -110,14 +109,14 @@ export class BasicContentService {
           },
         },
       });
-  
+
       if (!basicContent) {
         throw new HttpException(
           'Basic content not found',
           HttpStatus.NOT_FOUND,
         );
       }
-  
+
       if (user.userType === UserRole.ADMIN) {
         await adminAccessControl(
           this.prisma,
@@ -125,12 +124,10 @@ export class BasicContentService {
           basicContent.course.program.publishedFor,
         );
       }
-  
-      // ✅ Actually delete the record
       const deleted = await tx.basicContent.delete({
         where: { id },
       });
-  
+
       return deleted;
     });
   }
