@@ -29,7 +29,7 @@ model User {
 
   isVerified Boolean    @default(false)
   userType   UserRole
-  status     Status     @default(BASIC)
+  status     Status     @default(ACTIVE)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   developer  Developer?
@@ -67,7 +67,7 @@ model State {
 model Developer {
   id     String @id @default(uuid())
   email  String @unique
-  status Status @default(STANDARD)
+  status Status @default(ACTIVE)
 
   references   Reference[]
   publications Publication[]
@@ -80,7 +80,7 @@ model Developer {
 model Server {
   id     String @id @default(uuid())
   email  String @unique
-  status Status @default(STANDARD)
+  status Status @default(ACTIVE)
 
   references   Reference[]
   publications Publication[]
@@ -93,7 +93,7 @@ model Server {
 model Admin {
   id        String                @id @default(uuid())
   email     String                @unique
-  // status    Status                @default()
+  status    Status                @default(ACTIVE)
   canAccess RolesToAccessForAdmin
 
   user   User   @relation(fields: [userId], references: [id])
@@ -347,9 +347,8 @@ enum RolesToAccessForAdmin {
 }
 
 enum Status {
-  BASIC
-  STANDARD
-  CERTIFIED
+  BLOCKED
+  ACTIVE
 }
 
 enum Gender {
