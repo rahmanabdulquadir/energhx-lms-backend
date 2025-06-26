@@ -334,6 +334,12 @@ model Review {
   @@unique([userId, courseId])
 }
 
+// model Book {
+//   id      String @id @default(uuid())
+//   comment String
+//   rating  Int
+// }
+
 enum UserRole {
   SERVER
   DEVELOPER
