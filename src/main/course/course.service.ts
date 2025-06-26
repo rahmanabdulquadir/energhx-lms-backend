@@ -139,7 +139,41 @@ export class CourseService {
   }
   
   //----------------------------------Get All Courses---------------------------------------
-
+  public async getAllCourses() {
+    const courses = await this.prisma.course.findMany({
+      include: {
+        modules: {
+          include: {
+            contents: {
+              select: {
+                videoDuration: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  
+    const resultWithDuration = courses.map((course) => {
+      const totalDuration = course.modules.reduce((moduleAcc, mod) => {
+        const moduleDuration = mod.contents.reduce(
+          (contentAcc, content) => contentAcc + (content.videoDuration || 0),
+          0,
+        );
+        return moduleAcc + moduleDuration;
+      }, 0);
+  
+      // Remove modules from final output to keep it clean like your response
+      const { modules, ...courseWithoutModules } = course;
+  
+      return {
+        ...courseWithoutModules,
+        totalDuration,
+      };
+    });
+  
+    return resultWithDuration;
+  }
   
 
   //------------------------------------Update Course---------------------------------------
