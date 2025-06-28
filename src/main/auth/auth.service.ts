@@ -56,29 +56,34 @@ export class AuthService {
         status: Status.ACTIVE,
       },
     });
-
-    const isCorrectPassword = bcrypt.compare(
+  
+    const isCorrectPassword = await bcrypt.compare(
       payload.password,
       userData.password as string,
     );
+  
     if (!isCorrectPassword) {
-      throw new HttpException('Password is incorrect', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Current password is incorrect', HttpStatus.BAD_REQUEST);
     }
-
-    const hashedPassword: string = await bcrypt.hash(payload.confirmPassword, 12);
-
-    // Update operation
+  
+    if (payload.password === payload.confirmPassword) {
+      throw new HttpException('New password must be different from the old one', HttpStatus.BAD_REQUEST);
+    }
+  
+    const hashedPassword = await bcrypt.hash(payload.confirmPassword, 12);
+  
     await this.prisma.user.update({
       where: {
-        email: userData?.email,
+        email: userData.email,
       },
       data: {
         password: hashedPassword,
       },
     });
-    return null;
+  
+    return { message: 'Password updated successfully' };
   }
-
+  
   // ---------------------------------------------------Forgot Password-------------------------------------------------
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({
