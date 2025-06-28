@@ -38,21 +38,61 @@ export class ProgramService {
   }
 
   // --------------------------------Get Single Program---------------------------------
+  // public async getSingleProgram(id: string, user: TUser) {
+  //   const program = await this.prisma.program.findUnique({
+  //     where: { id },
+  //   });
+  //   if (!program) throw new HttpException('Program Not Found', 404);
+  //   if (user.userType === UserRole.ADMIN)
+  //     await adminAccessControl(this.prisma, user, program.publishedFor);
+  //   if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
+  //     if (program.publishedFor !== user.userType)
+  //       throw new HttpException(
+  //         'This program is not for you to view',
+  //         HttpStatus.BAD_REQUEST,
+  //       );
+  //   }
+
+  //   const result = await this.prisma.program.findUnique({
+  //     where: { id },
+  //     include: {
+  //       courses: {
+  //         include: {
+  //           _count: {
+  //             select: {
+  //               modules: true,
+  //               reviews: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   return result;
+  // }
+
+
   public async getSingleProgram(id: string, user: TUser) {
     const program = await this.prisma.program.findUnique({
       where: { id },
     });
+  
     if (!program) throw new HttpException('Program Not Found', 404);
-    if (user.userType === UserRole.ADMIN)
+  
+    if (user.userType === UserRole.ADMIN) {
       await adminAccessControl(this.prisma, user, program.publishedFor);
+    }
+  
     if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
-      if (program.publishedFor !== user.userType)
+      if (program.publishedFor !== user.userType) {
         throw new HttpException(
           'This program is not for you to view',
           HttpStatus.BAD_REQUEST,
         );
+      }
     }
-
+  
     const result = await this.prisma.program.findUnique({
       where: { id },
       include: {
@@ -68,8 +108,25 @@ export class ProgramService {
         },
       },
     });
-
-    return result;
+  
+    if (!result) throw new HttpException('Program not found', 404);
+  
+    // 🔍 Fetch user level
+    const userInfo = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { level: true },
+    });
+  
+    // 🧠 Append level to each course
+    const coursesWithLevel = result.courses.map((course) => ({
+      ...course,
+      level: userInfo?.level ?? null,
+    }));
+  
+    return {
+      ...result,
+      courses: coursesWithLevel,
+    };
   }
 
   //----------------------------------Get All Programs--------------------------------------
