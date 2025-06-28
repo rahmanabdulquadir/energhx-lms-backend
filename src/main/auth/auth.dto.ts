@@ -24,15 +24,11 @@ export class ForgotPasswordDto {
 
 export class ChangePasswordDto {
   @IsString()
-  @MinLength(6, {
-    message: 'Password is too short. Minimum length is 6 characters.',
-  })
+  @MinLength(6, { message: 'Password is too short. Minimum 6 characters.' })
   password: string;
 
   @IsString()
-  @MinLength(6, {
-    message: 'Password is too short. Minimum length is 6 characters.',
-  })
+  @MinLength(6, { message: 'Confirm password is too short. Minimum 6 characters.' })
   confirmPassword: string;
 }
 

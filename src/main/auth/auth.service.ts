@@ -22,7 +22,7 @@ export class AuthService {
   public async loginUser(data: { email: string; password: string }) {
     const { email, password } = data;
     const user = await this.prisma.user.findUnique({
-      where: { email, status: Status.ACTIVE, },
+      where: { email, status: Status.ACTIVE },
     });
 
     if (!user) throw new HttpException('User not found', 401);
@@ -32,7 +32,7 @@ export class AuthService {
         HttpStatus.BAD_REQUEST,
       );
 
-    const isCorrectPassword = bcrypt.compare(password, user.password);
+    const isCorrectPassword = await bcrypt.compare(password, user.password);
     if (!isCorrectPassword) throw new HttpException('Invalid credentials', 401);
 
     const payload = { email: user.email, userType: user.userType, id: user.id };
@@ -56,22 +56,33 @@ export class AuthService {
         status: Status.ACTIVE,
       },
     });
-  
+
+    console.log('📄 Fetched user from DB:', {
+      email: userData.email,
+      status: userData.status,
+      hashedPassword: userData.password,
+    });
+
     const isCorrectPassword = await bcrypt.compare(
       payload.password,
       userData.password as string,
     );
-  
+
     if (!isCorrectPassword) {
-      throw new HttpException('Current password is incorrect', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Current password is incorrect',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-  
+
     if (payload.password === payload.confirmPassword) {
-      throw new HttpException('New password must be different from the old one', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'New password must be different from the old one',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-  
+
     const hashedPassword = await bcrypt.hash(payload.confirmPassword, 12);
-  
     await this.prisma.user.update({
       where: {
         email: userData.email,
@@ -80,10 +91,9 @@ export class AuthService {
         password: hashedPassword,
       },
     });
-  
     return { message: 'Password updated successfully' };
   }
-  
+
   // ---------------------------------------------------Forgot Password-------------------------------------------------
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({
@@ -110,8 +120,8 @@ export class AuthService {
               </a>
           </p>
       </div>`,
-      "Reset Password Link 🔗",
-      "Click on the link to reset your password. Link expires in 10 minutes."
+      'Reset Password Link 🔗',
+      'Click on the link to reset your password. Link expires in 10 minutes.',
     );
     return null;
   }
