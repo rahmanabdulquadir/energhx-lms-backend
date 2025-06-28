@@ -281,6 +281,7 @@ export class UserService {
       if (userProgramsData.length > 0) {
         await this.prisma.userProgram.createMany({
           data: userProgramsData,
+          skipDuplicates: true,
         });
       }
     }
