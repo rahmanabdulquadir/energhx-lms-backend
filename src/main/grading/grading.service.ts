@@ -30,9 +30,9 @@ export class GradingService {
     userId: string,
     courseId: string,
   ): Promise<number> {
-    console.log(
-      `📘 Fetching quiz submissions for userId=${userId}, courseId=${courseId}`,
-    );
+    // console.log(
+    //   `📘 Fetching quiz submissions for userId=${userId}, courseId=${courseId}`,
+    // );
 
     const submissions = await this.prisma.quizSubmission.findMany({
       where: {
@@ -63,34 +63,34 @@ export class GradingService {
       },
     });
 
-    console.log(`✅ Found ${submissions.length} completed quiz submissions`);
+    // console.log(`✅ Found ${submissions.length} completed quiz submissions`);
 
     if (!submissions.length) return 0;
 
     const percentages = submissions.map((sub, index) => {
       const total = sub.quizInstance.totalMark ?? 0;
       const score = total > 0 ? (sub.correctAnswers / total) * 100 : 0;
-      console.log(
-        `📊 Submission ${index + 1}: correct=${sub.correctAnswers}, total=${total}, score=${score.toFixed(2)}%`,
-      );
+      // console.log(
+      //   `📊 Submission ${index + 1}: correct=${sub.correctAnswers}, total=${total}, score=${score.toFixed(2)}%`,
+      // );
       return score;
     });
 
     const avg = percentages.reduce((sum, p) => sum + p, 0) / percentages.length;
-    console.log(`🎯 Average score: ${avg.toFixed(2)}%`);
+    // console.log(`🎯 Average score: ${avg.toFixed(2)}%`);
 
     return parseFloat(avg.toFixed(2));
   }
 
   async issueCertificate(userId: string, courseId: string) {
-    console.log(
-      `🏅 Attempting to issue certificate for userId=${userId}, courseId=${courseId}`,
-    );
+    // console.log(
+    //   `🏅 Attempting to issue certificate for userId=${userId}, courseId=${courseId}`,
+    // );
 
     const average = await this.getCourseAveragePercentage(userId, courseId);
 
     if (average < 33) {
-      console.log(`⛔️ User failed with average: ${average.toFixed(2)}%`);
+      // console.log(`⛔️ User failed with average: ${average.toFixed(2)}%`);
       throw new BadRequestException('User has not passed the course.');
     }
 
@@ -99,7 +99,7 @@ export class GradingService {
     });
 
     if (existing) {
-      console.log('📄 Existing certificate found. Returning...');
+      // console.log('📄 Existing certificate found. Returning...');
       return existing;
     }
 
@@ -111,7 +111,7 @@ export class GradingService {
       },
     });
 
-    console.log('✅ Certificate issued successfully');
+    // console.log('✅ Certificate issued successfully');
     return newCertificate;
   }
 

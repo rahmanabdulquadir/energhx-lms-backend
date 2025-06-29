@@ -12,7 +12,7 @@ const adminAccessControl = async (
     where: { userId: user.id },
   });
 
-  console.log(admin?.canAccess, publishedFor)
+  // console.log(admin?.canAccess, publishedFor)
 
   if (!admin) throw new HttpException('Admin Not Found', 404);
 

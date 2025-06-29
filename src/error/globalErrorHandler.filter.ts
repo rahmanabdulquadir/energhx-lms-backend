@@ -66,7 +66,7 @@ export class GlobalErrorHandlerFilter implements ExceptionFilter {
 
     // ✅ Handle Prisma Errors
     if (exception instanceof PrismaClientValidationError) {
-      console.log('Prisma Client Validation Error: ', exception);
+      // console.log('Prisma Client Validation Error: ', exception);
       message = 'Validation Error';
       errorDetails = exception.message;
       status = HttpStatus.BAD_REQUEST;

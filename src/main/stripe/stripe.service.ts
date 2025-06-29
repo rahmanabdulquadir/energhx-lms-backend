@@ -26,7 +26,7 @@ export class StripeService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    console.log(stripeSecretKey);
+    // console.log(stripeSecretKey);
     this.stripe = new Stripe(stripeSecretKey);
   }
 
@@ -41,11 +41,11 @@ export class StripeService {
     });
     if (!program) throw new HttpException('Program not found!', 404);
 
-    console.log(
-      'userId and programId before creating session in createCheckoutSession -> ',
-      userId,
-      programId,
-    );
+    // console.log(
+    //   'userId and programId before creating session in createCheckoutSession -> ',
+    //   userId,
+    //   programId,
+    // );
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: useremail,
@@ -81,7 +81,7 @@ export class StripeService {
     const signature = req.headers['stripe-signature'] as string;
     const rawBody = req.body as Buffer;
   
-    console.log('📥 Stripe webhook hit');
+    // console.log('📥 Stripe webhook hit');
   
     if (!rawBody) throw new BadRequestException('Missing raw body');
   
@@ -92,7 +92,7 @@ export class StripeService {
     try {
       event = this.stripe.webhooks.constructEvent(rawBody, signature, endpointSecret);
     } catch (err: any) {
-      console.error('❌ Stripe signature error:', err.message);
+      // console.error('❌ Stripe signature error:', err.message);
       throw new BadRequestException('Invalid Stripe signature');
     }
   
@@ -102,16 +102,16 @@ export class StripeService {
     const userId = metadata?.userId;
     const programId = metadata?.programId;
   
-    console.log('✅ Event received:', event.type);
-    console.log('🧾 Metadata:', metadata);
+    // console.log('✅ Event received:', event.type);
+    // console.log('🧾 Metadata:', metadata);
   
     if (event.type === 'payment_intent.succeeded') {
       if (!userId || !programId) {
-        console.warn('⚠️ Metadata missing userId or programId');
+        // console.warn('⚠️ Metadata missing userId or programId');
         return { received: true, warning: 'Missing metadata' };
       }
   
-      console.log(`🔎 Looking for userProgram with userId=${userId} and programId=${programId}`);
+      // console.log(`🔎 Looking for userProgram with userId=${userId} and programId=${programId}`);
   
       await this.prisma.$transaction(async (tx) => {
         const userProgram = await tx.userProgram.findUnique({
@@ -121,11 +121,11 @@ export class StripeService {
         });
   
         if (!userProgram) {
-          console.warn('⚠️ No userProgram found');
+          // console.warn('⚠️ No userProgram found');
           return;
         }
   
-        console.log('✅ userProgram found:', userProgram);
+        // console.log('✅ userProgram found:', userProgram);
   
         // Update userProgram payment status
         await tx.userProgram.update({
@@ -140,39 +140,39 @@ export class StripeService {
           },
         });
   
-        console.log('📝 userProgram updated');
+        // console.log('📝 userProgram updated');
   
         // Now update user level
         const user = await tx.user.findUnique({ where: { id: userId } });
   
         if (!user) {
-          console.error('❌ User not found, skipping level update');
+          // console.error('❌ User not found, skipping level update');
           return;
         }
   
-        console.log('🧍 User before update:', { id: user.id, level: user.level });
+        // console.log('🧍 User before update:', { id: user.id, level: user.level });
   
         if (user.level !== 'CERTIFIED') {
           await tx.user.update({
             where: { id: userId },
             data: { level: 'STANDARD' },
           });
-          console.log('✅ User level updated to STANDARD');
+          // console.log('✅ User level updated to STANDARD');
         } else {
-          console.log('ℹ️ User already CERTIFIED, level not changed');
+          // console.log('ℹ️ User already CERTIFIED, level not changed');
         }
       });
     }
   
     if (event.type === 'payment_intent.payment_failed') {
-      console.warn('❌ Payment failed for:', { userId, programId });
+      // console.warn('❌ Payment failed for:', { userId, programId });
   
       await this.prisma.userProgram.updateMany({
         where: { userId, programId },
         data: { paymentStatus: PaymentStatus.FAILED },
       });
   
-      console.warn('🚨 Payment status set to FAILED');
+      // console.warn('🚨 Payment status set to FAILED');
     }
   
     return { received: true, type: event.type };
@@ -232,10 +232,10 @@ export class StripeService {
         )
       : null;
 
-    console.log(
-      'Metadata inside getCheckoutSessionDetails -> ',
-      session.metadata,
-    );
+    // console.log(
+    //   'Metadata inside getCheckoutSessionDetails -> ',
+    //   session.metadata,
+    // );
     return {
       amountTotal: session.amount_total ? session.amount_total / 100 : null, // convert from cents to dollars
       currency: session.currency,

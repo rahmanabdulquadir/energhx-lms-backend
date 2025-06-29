@@ -179,7 +179,7 @@ export class ProgramService {
 
   //----------------------------------Get My Programs--------------------------------------
   public async getMyPrograms(user: TUser) {
-    console.log('[DEBUG] Fetching user programs for:', user.id);
+    // console.log('[DEBUG] Fetching user programs for:', user.id);
 
     const userPrograms = await this.prisma.userProgram.findMany({
       where: {
@@ -198,22 +198,22 @@ export class ProgramService {
       },
     });
 
-    console.log(
-      '[DEBUG] Raw userPrograms from DB:',
-      JSON.stringify(userPrograms, null, 2),
-    );
+    // console.log(
+    //   '[DEBUG] Raw userPrograms from DB:',
+    //   JSON.stringify(userPrograms, null, 2),
+    // );
 
     const result = await Promise.all(
       userPrograms.map(async (up) => {
         let status = up.status;
-        console.log('[DEBUG] Initial status:', status);
-        console.log('[DEBUG] Payment status:', up.paymentStatus);
+        // console.log('[DEBUG] Initial status:', status);
+        // console.log('[DEBUG] Payment status:', up.paymentStatus);
 
         if (up.paymentStatus === 'SUCCESS') {
           status = 'STANDARD';
-          console.log(
-            '[DEBUG] Updated status to STANDARD due to payment success.',
-          );
+          // console.log(
+          //   '[DEBUG] Updated status to STANDARD due to payment success.',
+          // );
 
           const courseIds = await this.prisma.course
             .findMany({
@@ -222,7 +222,7 @@ export class ProgramService {
             })
             .then((courses) => courses.map((course) => course.id));
 
-          console.log('[DEBUG] Course IDs for program:', courseIds);
+          // console.log('[DEBUG] Course IDs for program:', courseIds);
 
           const hasCertificate = await this.prisma.certificate.findFirst({
             where: {
@@ -231,23 +231,23 @@ export class ProgramService {
             },
           });
 
-          console.log('[DEBUG] Certificate found:', !!hasCertificate);
+          // console.log('[DEBUG] Certificate found:', !!hasCertificate);
 
           if (hasCertificate) {
             status = 'CERTIFIED';
-            console.log(
-              '[DEBUG] Updated status to CERTIFIED due to certificate.',
-            );
+            // console.log(
+            //   '[DEBUG] Updated status to CERTIFIED due to certificate.',
+            // );
           }
         }
 
-        console.log(
-          '[DEBUG] DB status:',
-          up.status,
-          '| Payment:',
-          up.paymentStatus,
-        );
-        console.log('[DEBUG] Final resolved status:', status);
+        // console.log(
+        //   '[DEBUG] DB status:',
+        //   up.status,
+        //   '| Payment:',
+        //   up.paymentStatus,
+        // );
+        // console.log('[DEBUG] Final resolved status:', status);
         return {
           status,
           program: up.program,

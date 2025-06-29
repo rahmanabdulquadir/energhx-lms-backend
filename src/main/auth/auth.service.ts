@@ -57,11 +57,11 @@ export class AuthService {
       },
     });
 
-    console.log('📄 Fetched user from DB:', {
-      email: userData.email,
-      status: userData.status,
-      hashedPassword: userData.password,
-    });
+    // console.log('📄 Fetched user from DB:', {
+    //   email: userData.email,
+    //   status: userData.status,
+    //   hashedPassword: userData.password,
+    // });
 
     const isCorrectPassword = await bcrypt.compare(
       payload.password,

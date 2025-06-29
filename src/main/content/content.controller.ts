@@ -106,7 +106,7 @@ export class ContentController {
       });
   
     } catch (err) {
-      console.error('💥 Content creation error:', err);
+      // console.error('💥 Content creation error:', err);
       sendResponse(res, {
         statusCode: err?.status || 500,
         success: false,

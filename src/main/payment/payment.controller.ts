@@ -42,7 +42,7 @@ export class PaymentController {
     @Headers('stripe-signature') signature: string,
     @Req() req: RawBodyRequest<Request>,
   ) {
-    console.log('⚡️ Webhook HIT!');
+    // console.log('⚡️ Webhook HIT!');
     return this.stripeService.handleWebhook(req);
   }
 

@@ -289,7 +289,7 @@ export class UserService {
   }
 
   private async checkAndPromoteIfCertified(userId: string, programId: string) {
-    console.log('🎯 Re-checking for full program certification...');
+    // console.log('🎯 Re-checking for full program certification...');
 
     const programCourses = await this.prisma.course.findMany({
       where: { programId },
@@ -297,7 +297,7 @@ export class UserService {
     });
 
     const programCourseIds = programCourses.map((course) => course.id);
-    console.log('📘 Program Courses:', programCourseIds);
+    // console.log('📘 Program Courses:', programCourseIds);
 
     const userProgresses = await this.prisma.progress.findMany({
       where: {
@@ -307,7 +307,7 @@ export class UserService {
       select: { courseId: true, percentage: true },
     });
 
-    console.log('📈 User Progresses:', userProgresses);
+    // console.log('📈 User Progresses:', userProgresses);
 
     const allCompleted = programCourseIds.every((courseId) =>
       userProgresses.some(
@@ -316,10 +316,10 @@ export class UserService {
       ),
     );
 
-    console.log('✅ All program courses completed:', allCompleted);
+    // console.log('✅ All program courses completed:', allCompleted);
 
     if (allCompleted) {
-      console.log('🏅 Promoting user to CERTIFIED');
+      // console.log('🏅 Promoting user to CERTIFIED');
 
       await this.prisma.$transaction(async (tx) => {
         await tx.userProgram.update({
@@ -344,9 +344,9 @@ export class UserService {
             where: { id: userId },
             data: { level: 'CERTIFIED' },
           });
-          console.log(`🎓 User ${userId} upgraded to CERTIFIED`);
+          // console.log(`🎓 User ${userId} upgraded to CERTIFIED`);
         } else {
-          console.log(`ℹ️ User ${userId} already CERTIFIED`);
+          // console.log(`ℹ️ User ${userId} already CERTIFIED`);
         }
       });
     }
@@ -354,10 +354,10 @@ export class UserService {
 
   //----------------------------------------Set Progress--------------------------------------------------
   public async setProgress(courseId: string, user: TUser, contentId: string) {
-    console.log('▶️ setProgress triggered');
-    console.log('👤 User:', user.id);
-    console.log('📘 Course:', courseId);
-    console.log('📄 Content:', contentId);
+    // console.log('▶️ setProgress triggered');
+    // console.log('👤 User:', user.id);
+    // console.log('📘 Course:', courseId);
+    // console.log('📄 Content:', contentId);
 
     const userRecord = await this.prisma.user.findUnique({
       where: { id: user.id, status: 'ACTIVE' },
@@ -411,7 +411,7 @@ export class UserService {
     const contentIds = modules.flatMap((module) =>
       module.contents.map((content) => content.id),
     );
-    console.log('🧾 All contents:', contentIds);
+    // console.log('🧾 All contents:', contentIds);
 
     const index = contentIds.findIndex((content) => content === contentId);
     if (index === -1)
@@ -445,11 +445,11 @@ export class UserService {
     }
 
     if (existingProgress && index <= prevIndex) {
-      console.log(
-        '⚠️ Skipping update: Already watched or behind current progress',
-      );
-      console.log('📌 currentIndex:', index, '| prevIndex:', prevIndex);
-      console.log('📈 existingPercentage:', existingProgress.percentage);
+      // console.log(
+      //   '⚠️ Skipping update: Already watched or behind current progress',
+      // );
+      // console.log('📌 currentIndex:', index, '| prevIndex:', prevIndex);
+      // console.log('📈 existingPercentage:', existingProgress.percentage);
 
       // ⚠️ Even if progress not updated, still check if promotion is needed
       if (existingProgress.percentage === 100) {
@@ -462,7 +462,7 @@ export class UserService {
       };
     }
     const percentage = Math.round(((index + 1) / contentIds.length) * 100);
-    console.log('📊 Updated percentage:', percentage);
+    // console.log('📊 Updated percentage:', percentage);
 
     await this.prisma.progress.upsert({
       where: { userId_courseId: { userId: user.id, courseId } },
@@ -471,7 +471,7 @@ export class UserService {
     });
     // ✅ Check for full program completion
     if (percentage === 100) {
-      console.log('🎯 Checking full program completion');
+      // console.log('🎯 Checking full program completion');
 
       const programCourses = await this.prisma.course.findMany({
         where: { programId: courseProgram.programId },
@@ -479,7 +479,7 @@ export class UserService {
       });
 
       const programCourseIds = programCourses.map((course) => course.id);
-      console.log('📘 Program Courses:', programCourseIds);
+      // console.log('📘 Program Courses:', programCourseIds);
 
       const userProgresses = await this.prisma.progress.findMany({
         where: {
@@ -488,7 +488,7 @@ export class UserService {
         },
         select: { courseId: true, percentage: true },
       });
-      console.log('📈 User Progresses:', userProgresses);
+      // console.log('📈 User Progresses:', userProgresses);
 
       const allCompleted = programCourseIds.every((courseId) =>
         userProgresses.some(
@@ -497,10 +497,10 @@ export class UserService {
         ),
       );
 
-      console.log('✅ All program courses completed:', allCompleted);
+      // console.log('✅ All program courses completed:', allCompleted);
 
       if (allCompleted) {
-        console.log('🏅 Promoting user to CERTIFIED');
+        // console.log('🏅 Promoting user to CERTIFIED');
 
         await this.prisma.$transaction(async (tx) => {
           await tx.userProgram.update({
@@ -525,9 +525,9 @@ export class UserService {
               where: { id: user.id },
               data: { level: 'CERTIFIED' },
             });
-            console.log(`🎓 User ${user.id} upgraded to CERTIFIED`);
+            // console.log(`🎓 User ${user.id} upgraded to CERTIFIED`);
           } else {
-            console.log(`ℹ️ User ${user.id} already CERTIFIED`);
+            // console.log(`ℹ️ User ${user.id} already CERTIFIED`);
           }
         });
       }
