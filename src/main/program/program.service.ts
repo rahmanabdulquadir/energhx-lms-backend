@@ -321,6 +321,13 @@ export class ProgramService {
     // Step 2: Perform deletions inside transaction
     return this.prisma.$transaction(
       async (tx) => {
+        // 🧹 Delete progress records BEFORE content to prevent FK constraint errors
+        if (contentIds.length > 0) {
+          await tx.progress.deleteMany({
+            where: { contentId: { in: contentIds } },
+          });
+        }
+
         await tx.quizSubmission.deleteMany({
           where: { quizInstanceId: { in: quizInstanceIds } },
         });
@@ -331,6 +338,10 @@ export class ProgramService {
 
         await tx.quizInstance.deleteMany({
           where: { id: { in: quizInstanceIds } },
+        });
+
+        await tx.certificate.deleteMany({
+          where: { courseId: { in: courseIds } }, // 🔥 Delete certificates before courses
         });
 
         await tx.content.deleteMany({
@@ -349,6 +360,7 @@ export class ProgramService {
           where: { courseId: { in: courseIds } },
         });
 
+        // Optional: If you still want to delete progress by courseId (for safety)
         await tx.progress.deleteMany({
           where: { courseId: { in: courseIds } },
         });
