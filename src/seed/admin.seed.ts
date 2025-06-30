@@ -226,6 +226,7 @@ export class UserSeeder implements OnModuleInit {
         });
       });
 
+      Logger.log('Nigeria already exists.');
       Logger.log('Super Admin created successfully.');
     } else {
       Logger.log('Super Admin already exists.');
