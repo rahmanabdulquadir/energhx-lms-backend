@@ -83,3 +83,17 @@ export class SubmitAnswerDto {
   contentId: string;
 }
 
+export class CreateQuizResultDto {
+  quizSubmission: {
+    id: string;
+    correctAnswers: number;
+    incorrectAnswers: number;
+    isCompleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+    quizInstanceId: string;
+    userId: string;
+  };
+  score: number;
+  total: number;
+}

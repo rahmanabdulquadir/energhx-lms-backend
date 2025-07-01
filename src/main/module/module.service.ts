@@ -85,6 +85,7 @@ export class ModuleService {
           select: {
             id: true,
             title: true,
+            description: true,
             videoDuration: true,
             contentType: true,
             videoPublicId: true,
