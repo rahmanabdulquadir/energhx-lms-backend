@@ -49,9 +49,9 @@ export class ModuleService {
         },
       },
     });
-  
+
     if (!module) throw new HttpException('Module Not Found', 404);
-  
+
     if (user.userType !== 'ADMIN' && user.userType !== 'SUPER_ADMIN') {
       if (module.course.program.publishedFor !== user.userType) {
         throw new HttpException(
@@ -59,7 +59,7 @@ export class ModuleService {
           HttpStatus.BAD_REQUEST,
         );
       }
-  
+
       const paymentStatus = await this.prisma.userProgram.findUnique({
         where: {
           userId_programId: {
@@ -68,7 +68,7 @@ export class ModuleService {
           },
         },
       });
-  
+
       if (!paymentStatus) {
         throw new HttpException(
           'You need to pay first to view the course',
@@ -76,7 +76,7 @@ export class ModuleService {
         );
       }
     }
-  
+
     // Step 2: Retrieve module with contents including duration
     const result = await this.prisma.module.findUnique({
       where: { id },
@@ -86,28 +86,32 @@ export class ModuleService {
             id: true,
             title: true,
             videoDuration: true,
+            contentType: true,
+            videoPublicId: true,
+            moduleId: true,
+            video: true,
             // add more fields if needed
           },
         },
       },
     });
-  
+
     if (!result) {
       throw new HttpException('Module Not Found', 404);
     }
-  
+
     // Step 3: Inject courseId into each content
     const contentsWithCourseId = result.contents.map((content) => ({
       ...content,
       courseId: module.course.id,
     }));
-  
+
     // Step 4: Calculate total duration
     const totalDuration = contentsWithCourseId.reduce(
       (sum, content) => sum + (content.videoDuration || 0),
       0,
     );
-  
+
     return {
       ...result,
       courseId: module.course.id,
@@ -127,11 +131,11 @@ export class ModuleService {
         },
       },
     });
-  
+
     if (!modules || modules.length === 0) {
       throw new HttpException('No Module Found for this course!', 404);
     }
-  
+
     const enhancedModules = modules.map((module) => {
       const totalDuration = module.contents.reduce(
         (sum, content) => sum + (content.videoDuration || 0),
@@ -143,10 +147,10 @@ export class ModuleService {
         totalDuration, // ⏱️ total duration in minutes or seconds
       };
     });
-  
+
     return enhancedModules;
   }
-  
+
   //---------------------------------------Update Module--------------------------------------------
   public async updateModule(id: string, data: UpdateModuleDto, user: TUser) {
     const module = await this.prisma.module.findUnique({

@@ -43,7 +43,7 @@ model User {
 
   Certificate Certificate[]
 
-  level      UserLevel  @default(BASIC)
+  level UserLevel @default(BASIC)
 }
 
 model Country {
@@ -152,7 +152,7 @@ model UserProgram {
   user      User      @relation(fields: [userId], references: [id])
   programId String
   program   Program   @relation(fields: [programId], references: [id])
-  createdAt DateTime? @default(now()) // ✅ add this
+  createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
 
   @@unique([userId, programId])
@@ -218,28 +218,12 @@ model BasicContent {
   course   Course @relation(fields: [courseId], references: [id])
 }
 
-// model Content {
-//   id            String        @id @default(uuid())
-//   title         String
-//   contentType   ContentType
-//   video         String?
-//   description   String?
-//   videoDuration Int?
-//   createdAt     DateTime      @default(now())
-//   updatedAt     DateTime      @updatedAt
-//   quiz          QuizInstance?
-
-//   moduleId   String
-//   module     Module     @relation(fields: [moduleId], references: [id])
-//   progresses Progress[]
-// }
-
 model Content {
   id            String        @id @default(uuid())
   title         String
   contentType   ContentType
-  video         String? // The actual video URL (secure_url from Cloudinary)
-  videoPublicId String? // New: The Cloudinary public ID to fetch metadata
+  video         String?
+  videoPublicId String?
   description   String?
   videoDuration Int?
   createdAt     DateTime      @default(now())
@@ -336,12 +320,6 @@ model Review {
   @@unique([userId, courseId])
 }
 
-// model Book {
-//   id      String @id @default(uuid())
-//   comment String
-//   rating  Int
-// }
-
 enum UserRole {
   SERVER
   DEVELOPER
@@ -394,5 +372,3 @@ enum SubmissionStatus {
   LATE
   ONTIME
 }
-
-
