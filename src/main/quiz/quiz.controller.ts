@@ -12,7 +12,13 @@ import {
   Patch,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
-import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto, UpdateSingleQuizDto } from './quiz.dto';
+import {
+  CreateQuizDto,
+  CreateQuizResultDto,
+  SubmitAnswerDto,
+  UpdateQuizDto,
+  UpdateSingleQuizDto,
+} from './quiz.dto';
 import { RoleGuardWith } from 'src/utils/RoleGuardWith';
 import { AuthGuard } from 'src/guard/auth.guard';
 import { UserRole } from '@prisma/client';
@@ -91,7 +97,6 @@ export class QuizController {
     });
   }
 
-
   @Patch(':id')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
   async updateQuiz(
@@ -100,7 +105,11 @@ export class QuizController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const result = await this.quizService.updateQuiz(id, updateQuizDto, req.user);
+    const result = await this.quizService.updateQuiz(
+      id,
+      updateQuizDto,
+      req.user,
+    );
     sendResponse(res, {
       statusCode: HttpStatus.OK,
       success: true,
@@ -108,8 +117,6 @@ export class QuizController {
       data: result,
     });
   }
-  
-  
 
   @Delete('delete-quiz/:id')
   @UseGuards(AuthGuard, RoleGuardWith([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
@@ -126,4 +133,19 @@ export class QuizController {
       data: result,
     });
   }
+
+@Get('result')
+@UseGuards(AuthGuard, RoleGuardWith([UserRole.DEVELOPER, UserRole.SERVER]))
+async getQuizResult(
+  @Req() req: Request,
+  @Res() res: Response,
+) {
+  const result = await this.quizService.getQuizResult(req.user);
+  sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: 'Quiz result fetched successfully',
+    data: result,
+  });
+}
 }

@@ -44,6 +44,8 @@ model User {
   Certificate Certificate[]
 
   level UserLevel @default(BASIC)
+
+  QuizResult QuizResult[]
 }
 
 model Country {
@@ -277,6 +279,19 @@ model QuizSubmission {
   user           User         @relation(fields: [userId], references: [id])
 
   @@unique([quizInstanceId, userId]) // Ensures a user has only one submission per quiz instance
+  QuizResult QuizResult[]
+}
+
+model QuizResult {
+  id               String   @id @default(uuid())
+  quizSubmissionId String
+  userId           String
+  score            Int
+  total            Int
+  submittedAt      DateTime @default(now())
+  // relations (if you want)
+  quizSubmission   QuizSubmission @relation(fields: [quizSubmissionId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
 }
 
 model Progress {

@@ -1,5 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateQuizDto, SubmitAnswerDto, UpdateQuizDto, UpdateSingleQuizDto } from './quiz.dto';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateQuizDto, CreateQuizResultDto, SubmitAnswerDto, UpdateQuizDto, UpdateSingleQuizDto } from './quiz.dto';
 import { IdDto } from 'src/common/id.dto';
 import { ApiResponse } from 'src/utils/sendResponse';
 import { Quiz, QuizSubmission, UserRole } from '@prisma/client';
@@ -399,4 +399,29 @@ export class QuizService {
   
     return updatedQuiz;
   }
+
+async getQuizResult(user: any) {
+  const latestSubmission = await this.prisma.quizSubmission.findFirst({
+    where: {
+      userId: user.id,
+      isCompleted: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  if (!latestSubmission) {
+    throw new NotFoundException('No completed quiz found for this user');
+  }
+
+  const total = latestSubmission.correctAnswers + latestSubmission.incorrectAnswers;
+
+  return {
+    quizSubmission: latestSubmission,
+    score: latestSubmission.correctAnswers,
+    total,
+  };
+}
+
 }
